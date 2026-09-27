@@ -127,7 +127,7 @@ button { font: inherit; color: inherit; }
 .count { font-size: 0.88rem; color: var(--muted); margin-left: auto; }
 @media (max-width: 700px) { .count { margin-left: 0; width: 100%; } }
 
-.badge-open { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+.badge-int { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
 .badge-dl { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line-2); color: var(--muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }
 
 .map-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-bottom: 48px; }

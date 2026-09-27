@@ -6,17 +6,20 @@ import { concepts, dependentsOf } from '../data/concepts';
 import { formatRef } from '../data/books';
 import { ui } from '../i18n/ui';
 import { conceptUrl, mapUrl } from '../lib/paths';
+import { isAvailable, isInteractive } from '../lib/available';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const t = ui[lang];
 const other: Lang = lang === 'es' ? 'en' : 'es';
-const available = concepts.filter((c) => c.slug).length;
+const available = concepts.filter((c) => isAvailable(c.id)).length;
+const interactive = concepts.filter((c) => isInteractive(c.id)).length;
 
 const payload = {
   t: {
     prereqs: t.panelPrereqs, dependents: t.panelDependents, books: t.panelBooks, open: t.panelOpen,
     upcoming: t.panelUpcoming, none: t.panelNone, noDependents: t.panelNoDependents, dlTitle: t.dlBadgeTitle,
+    interactive: t.legendInteractive, interactiveTitle: t.interactiveTitle,
   },
   concepts: concepts.map((c) => ({
     id: c.id,
@@ -27,6 +30,7 @@ const payload = {
     prereqs: c.prereqs,
     dependents: dependentsOf(c.id),
     dl: !!c.dl,
+    interactive: isInteractive(c.id),
     url: conceptUrl(c, lang),
     refs: c.refs.map((r) => formatRef(r, lang)),
   })),
@@ -42,9 +46,9 @@ const payload = {
         <button class="toggle" type="button" aria-pressed="false" data-dl-toggle>
           <span class="switch" aria-hidden="true"></span>{t.dlRoute}
         </button>
-        <span class="legend"><span class="badge-open">{t.legendAvailable}</span></span>
+        <span class="legend"><span class="badge-int">{t.legendInteractive}</span></span>
         <span class="legend"><span class="badge-dl">DL</span>{t.dlBadgeTitle}</span>
-        <span class="count">{t.countLabel(concepts.length, available)}</span>
+        <span class="count">{t.countLabel(concepts.length, available, interactive)}</span>
       </div>
     </section>
 
@@ -76,9 +80,9 @@ const payload = {
                     <li>
                       <button class="chip" type="button" aria-pressed="false" data-id={c.id} data-dl={c.dl ? '1' : '0'}>
                         <span class="chip-title">{c.title[lang]}</span>
-                        {(c.slug || c.dl) && (
+                        {(isInteractive(c.id) || c.dl) && (
                           <span class="chip-meta">
-                            {c.slug && <span class="badge-open">{t.legendAvailable}</span>}
+                            {isInteractive(c.id) && <span class="badge-int" title={t.interactiveTitle}>{t.legendInteractive}</span>}
                             {c.dl && <span class="badge-dl" title={t.dlBadgeTitle}>DL</span>}
                           </span>
                         )}
@@ -113,7 +117,7 @@ const payload = {
 <script>
   type C = {
     id: string; slot: number; areaName: string; title: string; short: string;
-    prereqs: string[]; dependents: string[]; dl: boolean; url?: string; refs: string[];
+    prereqs: string[]; dependents: string[]; dl: boolean; interactive: boolean; url?: string; refs: string[];
   };
   const data = JSON.parse(document.getElementById('map-data')!.textContent || '{}');
   const t = data.t as Record<string, string>;
@@ -188,6 +192,7 @@ const payload = {
       <p class="panel-short">${esc(c.short)}</p>
       <div class="panel-actions">
         ${c.url ? `<a class="btn-primary" href="${c.url}">${esc(t.open)} <span aria-hidden="true">→</span></a>` : `<span class="status-upcoming">${esc(t.upcoming)}</span>`}
+        ${c.interactive ? `<span class="badge-int" title="${esc(t.interactiveTitle)}">${esc(t.interactive)}</span>` : ''}
         ${c.dl ? `<span class="badge-dl" title="${esc(t.dlTitle)}">DL</span>` : ''}
       </div>
       <div class="panel-section"><h3>${esc(t.prereqs)}</h3>${miniChips(c.prereqs, t.none)}</div>

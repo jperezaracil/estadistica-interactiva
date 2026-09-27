@@ -1,0 +1,99 @@
+---
+// Renders a concept page from its data file (src/concepts/<id>.ts).
+import ConceptLayout from './ConceptLayout.astro';
+import Callout from './Callout.astro';
+import Quiz from './Quiz.astro';
+import type { Lang } from '../data/areas';
+import type { LangContent } from '../lib/content-types';
+import { books } from '../data/books';
+import { inline, tex } from '../lib/inline';
+
+interface Props { id: string; lang: Lang; content: LangContent }
+const { id, lang, content } = Astro.props;
+
+const L = lang === 'es'
+  ? { key: 'Idea clave', note: 'Nota', pitfalls: ['errores', 'Errores frecuentes'], dl: ['deep-learning', 'En aprendizaje profundo'], quiz: ['repaso', 'Autoevaluación'], further: ['profundizar', 'Para profundizar'] }
+  : { key: 'Key idea', note: 'Note', pitfalls: ['pitfalls', 'Common mistakes'], dl: ['deep-learning', 'In deep learning'], quiz: ['review', 'Self-check'], further: ['further', 'Further reading'] };
+
+const toc = [
+  ...content.sections.map((s) => ({ id: s.id, label: s.title })),
+  { id: L.pitfalls[0], label: L.pitfalls[1] },
+  ...(content.dl.length ? [{ id: L.dl[0], label: L.dl[1] }] : []),
+  { id: L.quiz[0], label: L.quiz[1] },
+  { id: L.further[0], label: L.further[1] },
+];
+const h = (s: string) => inline(s, lang);
+
+// Shuffle the quiz options deterministically (seeded by concept and question, so both languages
+// get the same order): the position of the correct option carries no information.
+function rng(seed: string) {
+  let x = 2166136261;
+  for (const ch of seed) x = Math.imul(x ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return (x >>> 0) / 4294967296;
+  };
+}
+const quiz = content.quiz.map((q, k) => {
+  const next = rng(`${id}:${k}`);
+  const options = [...q.options];
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  return { ...q, options };
+});
+---
+<ConceptLayout id={id} lang={lang} toc={toc}>
+  <Fragment slot="lede"><Fragment set:html={h(content.lede)} /></Fragment>
+
+  {content.sections.map((section) => (
+    <>
+      <h2 id={section.id}>{section.title}</h2>
+      {section.blocks.map((b) => {
+        if ('p' in b) return <p set:html={h(b.p)} />;
+        if ('math' in b) return <div class="math-display" set:html={tex(b.math, true)} />;
+        if ('list' in b) return <ul>{b.list.map((item) => <li set:html={h(item)} />)}</ul>;
+        if ('key' in b) return <Callout label={L.key}><p set:html={h(b.key)} /></Callout>;
+        if ('note' in b) return <Callout label={L.note} variant="dl"><p set:html={h(b.note)} /></Callout>;
+        if ('table' in b) return (
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr>{b.table.head.map((c, j) => <th class={b.table.numeric?.includes(j) ? 'n' : undefined} set:html={h(c)} />)}</tr></thead>
+              <tbody>{b.table.rows.map((r) => <tr>{r.map((c, j) => <td class={b.table.numeric?.includes(j) ? 'n' : undefined} set:html={h(c)} />)}</tr>)}</tbody>
+            </table>
+          </div>
+        );
+        return null;
+      })}
+    </>
+  ))}
+
+  <h2 id={L.pitfalls[0]}>{L.pitfalls[1]}</h2>
+  <ul class="pitfalls">
+    {content.pitfalls.map((x) => (
+      <li><span class="claim" set:html={h(x.claim)} /><span class="fix" set:html={h(x.fix)} /></li>
+    ))}
+  </ul>
+
+  {content.dl.length > 0 && (
+    <>
+      <h2 id={L.dl[0]}>{L.dl[1]}</h2>
+      <ul>
+        {content.dl.map((d) => <li><strong set:html={h(d.title)} />{' '}<span set:html={h(d.text)} /></li>)}
+      </ul>
+    </>
+  )}
+
+  <h2 id={L.quiz[0]}>{L.quiz[1]}</h2>
+  <Quiz lang={lang} questions={quiz} html />
+
+  <h2 id={L.further[0]}>{L.further[1]}</h2>
+  <ul class="refs-full">
+    {content.further.map((f) => {
+      const b = books[f.book];
+      return <li>{b.url ? <a href={b.url}>{b.full[lang]}</a> : b.full[lang]} <span class="where" set:html={h(f.where)} /></li>;
+    })}
+    {(content.extra ?? []).map((x) => <li><a href={x.url} set:html={h(x.text)} /></li>)}
+  </ul>
+</ConceptLayout>

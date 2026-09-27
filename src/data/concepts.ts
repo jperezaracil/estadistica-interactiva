@@ -11,7 +11,7 @@ export interface Concept {
   /** Frequently needed to train or evaluate deep networks (highlighted by the DL route). */
   dl?: boolean;
   refs: Ref[];
-  /** Present only when the concept page exists. */
+  /** URL slug per language (filled automatically when not given). */
   slug?: Record<Lang, string>;
 }
 
@@ -248,6 +248,12 @@ export const concepts: Concept[] = [
     short: { es: 'Separar el ruido de los datos de lo que el modelo no sabe.', en: 'Separating noise in the data from what the model doesn’t know.' },
     refs: [{ book: 'pml2', ch: '17' }] },
 ];
+
+// Every concept gets a slug per language (explicit ones above take precedence).
+const slugify = (t: string) =>
+  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/χ²/g, 'chi2').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+for (const c of concepts) c.slug ??= { es: slugify(c.title.es), en: slugify(c.title.en) };
 
 export const conceptById = Object.fromEntries(concepts.map((c) => [c.id, c])) as Record<string, Concept>;
 

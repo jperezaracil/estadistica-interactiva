@@ -1,0 +1,21 @@
+---
+// Basic concept pages generated from src/concepts/*.ts
+import BasicConcept from '../../../components/BasicConcept.astro';
+import { conceptById } from '../../../data/concepts';
+import type { ConceptContent } from '../../../lib/content-types';
+import { richIds } from '../../../lib/available';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob<{ default: ConceptContent }>('../../../concepts/*.ts', { eager: true });
+  return Object.entries(mods).map(([path, mod]) => {
+    const id = path.split('/').pop()!.replace(/\.ts$/, '');
+    const c = conceptById[id];
+    if (!c) throw new Error(`src/concepts/${id}.ts does not match any concept id`);
+    if (richIds.has(id)) throw new Error(`${id} has a hand-written page: delete src/concepts/${id}.ts or remove it from richIds`);
+    return { params: { slug: c.slug!.en }, props: { id, content: mod.default } };
+  });
+}
+
+const { id, content } = Astro.props;
+---
+<BasicConcept id={id} lang="en" content={content.en} />

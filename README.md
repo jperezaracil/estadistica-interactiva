@@ -12,7 +12,10 @@ An interactive map of probability and statistics, with bridges to deep learning.
 npm install
 npm run dev      # servidor local
 npm run build    # compila el sitio y el service worker en dist/
+node scripts/check-content.mjs   # valida los contenidos de src/concepts/ (estructura, ES/EN, fórmulas, enlaces)
 ```
+
+Cada concepto es un fichero de datos en `src/concepts/<id>.ts` con su versión en castellano y en inglés; las páginas se generan a partir de ellos. Los conceptos con interactivo tienen páginas escritas a mano en `src/pages/`.
 
 El despliegue a GitHub Pages es automático al subir a `main` (GitHub Actions).
 

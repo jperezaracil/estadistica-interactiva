@@ -1,5 +1,6 @@
 ---
 import type { Lang } from '../data/areas';
+import { inline } from '../lib/inline';
 
 export interface QuizQuestion {
   prompt: string;
@@ -9,8 +10,11 @@ export interface QuizQuestion {
 interface Props {
   lang: Lang;
   questions: QuizQuestion[];
+  /** Render texts with the inline markup ($math$, **bold**, [[links]]). */
+  html?: boolean;
 }
-const { lang, questions } = Astro.props;
+const { lang, questions, html = false } = Astro.props;
+const r = (s: string) => (html ? inline(s, lang) : s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!));
 const L = lang === 'es'
   ? { right: 'Correcto.', wrong: 'No exactamente.', retry: 'Volver a intentarlo' }
   : { right: 'Correct.', wrong: 'Not quite.', retry: 'Try again' };
@@ -18,16 +22,16 @@ const L = lang === 'es'
 <div class="quiz" data-quiz data-right={L.right} data-wrong={L.wrong}>
   {questions.map((q, i) => (
     <div class="quiz-q" data-q role="group" aria-labelledby={`quiz-${lang}-${i}`}>
-      <p class="quiz-prompt" id={`quiz-${lang}-${i}`}>{i + 1}. {q.prompt}</p>
+      <p class="quiz-prompt" id={`quiz-${lang}-${i}`} set:html={`${i + 1}. ${r(q.prompt)}`}></p>
       <div class="quiz-options">
         {q.options.map((o) => (
           <button type="button" class="quiz-option" data-correct={o.correct ? '1' : '0'}>
             <span class="mark" aria-hidden="true"></span>
-            <span>{o.text}</span>
+            <span set:html={r(o.text)}></span>
           </button>
         ))}
       </div>
-      <p class="quiz-feedback" data-feedback hidden aria-live="polite"><strong data-verdict></strong> {q.explain}</p>
+      <p class="quiz-feedback" data-feedback hidden aria-live="polite"><strong data-verdict></strong> <span set:html={r(q.explain)}></span></p>
       <button type="button" class="quiz-retry" data-retry hidden>{L.retry}</button>
     </div>
   ))}

@@ -23,8 +23,8 @@ const questions = [
   {
     prompt: 'Con 20 lanzamientos salen 15 caras y el p-valor bilateral es 0,041. Con α = 0,05, ¿qué concluyes?',
     options: [
-      { text: 'Rechazo H₀: los datos son poco compatibles con una moneda justa.', correct: true },
-      { text: 'Hay un 4,1 % de probabilidad de que la moneda sea justa.' },
+      { text: 'Rechazo H₀: los datos son poco compatibles con una moneda equilibrada.', correct: true },
+      { text: 'Hay un 4,1 % de probabilidad de que la moneda esté equilibrada.' },
       { text: 'La moneda está trucada con una probabilidad del 95,9 %.' },
     ],
     explain: 'Como 0,041 ≤ 0,05, se rechaza H₀. Las otras dos opciones leen el p-valor como la probabilidad de una hipótesis, que es justo lo que no mide.',
@@ -53,14 +53,14 @@ const questions = [
   <Fragment slot="lede">Un contraste mide cómo de compatibles son unos datos con una hipótesis. El p-valor resume esa compatibilidad en un número, y es también la cifra más malinterpretada de la estadística.</Fragment>
 
   <h2 id="idea">La idea</h2>
-  <p>Lanzas una moneda 20 veces y salen 16 caras. ¿Está trucada? Un contraste no responde directamente a esa pregunta, sino a otra más modesta: si la moneda fuera justa, ¿sería raro ver algo así? Si lo es, tienes motivos para dudar de que sea justa.</p>
+  <p>Lanzas una moneda 20 veces y salen 16 caras. ¿Está trucada? Un contraste no responde directamente a esa pregunta, sino a otra más modesta: si la moneda estuviera equilibrada, ¿sería raro ver algo así? Si lo es, tienes motivos para dudar de que esté equilibrada.</p>
   <Callout label="Idea clave">
     <p>El p-valor responde a «si H₀ fuera cierta, ¿con qué frecuencia vería datos al menos tan extremos como los míos?». No responde a «¿qué probabilidad hay de que H₀ sea cierta?».</p>
   </Callout>
 
   <h2 id="ingredientes">Los ingredientes</h2>
   <dl class="defs">
-    <div><dt>Hipótesis nula (H₀)</dt><dd>La afirmación que se pone a prueba, casi siempre «no hay efecto». Aquí, que la moneda es justa: <Tex expr={String.raw`p = 0{,}5`} />.</dd></div>
+    <div><dt>Hipótesis nula (H₀)</dt><dd>La afirmación que se pone a prueba, casi siempre «no hay efecto». Aquí, que la moneda está equilibrada: <Tex expr={String.raw`p = 0{,}5`} />.</dd></div>
     <div><dt>Hipótesis alternativa (H₁)</dt><dd>Lo que se contempla si H₀ falla. Aquí, <Tex expr={String.raw`p \neq 0{,}5`} />: un sesgo hacia cualquiera de los dos lados.</dd></div>
     <div><dt>Estadístico</dt><dd>El resumen de los datos que se compara con lo esperado. Aquí, el número de caras <Tex expr={String.raw`X`} />, que bajo H₀ sigue una binomial <Tex expr={String.raw`\mathrm{B}(20;\ 0{,}5)`} />.</dd></div>
     <div><dt>Nivel de significación α</dt><dd>El umbral que se fija antes de ver los datos. Es la tasa de falsos positivos que aceptas cuando H₀ es cierta; el habitual 0,05 es solo una convención.</dd></div>
@@ -81,7 +81,7 @@ const questions = [
   <PValueExplorer lang="es" initial={16} />
 
   <h2 id="cola">Por qué se suma la cola</h2>
-  <p>La probabilidad de un resultado exacto no sirve para medir la sorpresa: cuando hay muchos resultados posibles, todos son poco probables por separado, incluso el más típico. En 1000 lanzamientos de una moneda justa, sacar exactamente 500 caras tiene probabilidad 0,025. Si decidieras con la probabilidad exacta y un umbral de 0,05, rechazarías que la moneda es justa saliera lo que saliera.</p>
+  <p>La probabilidad de un resultado exacto no sirve para medir la sorpresa: cuando hay muchos resultados posibles, todos son poco probables por separado, incluso el más típico. En 1000 lanzamientos de una moneda equilibrada, sacar exactamente 500 caras tiene probabilidad 0,025. Si decidieras con la probabilidad exacta y un umbral de 0,05, rechazarías que la moneda está equilibrada saliera lo que saliera.</p>
   <p>Lo que indica sorpresa es la distancia a lo esperado, y eso es lo que mide la cola: con 500 caras, todos los resultados son al menos igual de extremos y el p-valor es 1. Además, sumar la cola es lo que hace que α funcione: si rechazas H₀ cuando p ≤ 0,05 y H₀ es cierta, te equivocarás como mucho en el 5 % de los experimentos.</p>
 
   <h2 id="frontera">La frontera, en números</h2>
@@ -96,7 +96,7 @@ const questions = [
       </tbody>
     </table>
   </div>
-  <p>El intervalo de confianza (aquí, el exacto de Clopper-Pearson) incluye 0,5 justo en los casos en que el contraste no rechaza. No es casualidad: un IC al 95 % reúne los valores del parámetro que un contraste bilateral con α = 0,05 no rechazaría, cuando ambos se construyen con el mismo método. Y aporta lo que el p-valor no da: con 14 caras, la moneda podría ser justa o estar bastante sesgada.</p>
+  <p>El intervalo de confianza (aquí, el exacto de Clopper-Pearson) incluye 0,5 justo en los casos en que el contraste no rechaza. No es casualidad: un IC al 95 % reúne los valores del parámetro que un contraste bilateral con α = 0,05 no rechazaría, cuando ambos se construyen con el mismo método. Y aporta lo que el p-valor no da: con 14 caras, la moneda podría estar equilibrada o bastante sesgada.</p>
 
   <h2 id="errores">Errores frecuentes</h2>
   <ul class="pitfalls">

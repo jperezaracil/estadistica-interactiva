@@ -1,5 +1,6 @@
 import type { Lang } from '../data/areas';
 import type { Concept } from '../data/concepts';
+import { isAvailable } from './available';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
@@ -13,7 +14,7 @@ export function mapUrl(lang: Lang, conceptId?: string): string {
 }
 
 export function conceptUrl(c: Concept, lang: Lang): string | undefined {
-  if (!c.slug) return undefined;
+  if (!c.slug || !isAvailable(c.id)) return undefined;
   return url(lang === 'es' ? `es/conceptos/${c.slug.es}/` : `en/concepts/${c.slug.en}/`);
 }
 

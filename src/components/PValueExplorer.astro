@@ -30,10 +30,10 @@ const L = lang === 'es'
       reject: 'Rechazas H₀', keep: 'No rechazas H₀', unused: 'no se usa',
       hint: 'Toca una barra para ver su probabilidad.', barText: (k: number, p: string) => `${k} ${k === 1 ? 'cara' : 'caras'}: probabilidad ${p} si H₀ es cierta`,
       overlap: 'Con 10 caras las dos colas se solapan: todos los resultados son al menos igual de extremos, así que p = 1.',
-      yLabel: 'probabilidad', expected: '10 caras: lo esperado si la moneda es justa', observed: 'observado',
+      yLabel: 'probabilidad', expected: '10 caras: lo esperado si la moneda está equilibrada', observed: 'observado',
       xLabel: 'número de caras', legendTail: 'al menos tan extremo como lo observado', legendRest: 'resto',
       caption: 'Probabilidades exactas de la binomial B(20; 0,5). El p-valor es la suma de las barras azules.',
-      aria: 'Distribución del número de caras en 20 lanzamientos si la moneda es justa, con las colas resaltadas',
+      aria: 'Distribución del número de caras en 20 lanzamientos si la moneda está equilibrada, con las colas resaltadas',
     }
   : {
       title: 'Interactive · 20 coin tosses',
