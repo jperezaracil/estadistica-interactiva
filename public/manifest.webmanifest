@@ -1,0 +1,16 @@
+{
+  "name": "Estadística interactiva",
+  "short_name": "Estadística",
+  "description": "Mapa interactivo de probabilidad y estadística, con puentes al aprendizaje profundo.",
+  "lang": "es",
+  "start_url": "/estadistica-interactiva/",
+  "scope": "/estadistica-interactiva/",
+  "display": "standalone",
+  "background_color": "#F6F4EF",
+  "theme_color": "#F6F4EF",
+  "icons": [
+    { "src": "/estadistica-interactiva/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/estadistica-interactiva/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/estadistica-interactiva/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

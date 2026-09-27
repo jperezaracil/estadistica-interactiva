@@ -1,0 +1,130 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import PowerExplorer from '../../../components/PowerExplorer.astro';
+import FDRCalculator from '../../../components/FDRCalculator.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+
+const toc = [
+  { id: 'idea', label: 'The idea' },
+  { id: 'depends', label: 'What power depends on' },
+  { id: 'try-it', label: 'Try it' },
+  { id: 'sample-size', label: 'How much data you need' },
+  { id: 'false-positives', label: 'Power and false positives' },
+  { id: 'pitfalls', label: 'Common mistakes' },
+  { id: 'deep-learning', label: 'In deep learning' },
+  { id: 'review', label: 'Self-check' },
+  { id: 'further', label: 'Further reading' },
+];
+
+const questions = [
+  {
+    prompt: 'With n fixed, you lower α from 0.05 to 0.01. What happens to power?',
+    options: [
+      { text: 'It goes up.' },
+      { text: 'It goes down.', correct: true },
+      { text: 'It does not change.' },
+    ],
+    explain: 'Demanding more evidence moves the critical value: you reject less often, also when there is an effect. With d = 0.5 and n = 25, power drops from 0.80 to 0.57.',
+  },
+  {
+    prompt: 'A study with 20% power gets p = 0.03. Why be cautious?',
+    options: [
+      { text: 'Because the p-value is too high to be significant.' },
+      { text: 'Because with low power a large share of significant results are false or exaggerate the effect.', correct: true },
+      { text: 'Because power should always be 100%.' },
+    ],
+    explain: 'If only 10% of the tested hypotheses have a real effect and α = 0.05, 20% power means that 69% of significant results are false.',
+  },
+  {
+    prompt: 'You want to detect an effect d = 0.5 with two-sided α = 0.05 and power 0.80. Roughly how many observations do you need?',
+    options: [
+      { text: '8' },
+      { text: '32', correct: true },
+      { text: '126' },
+    ],
+    explain: 'n = ((1.96 + 0.84)/0.5)² ≈ 31.4, which rounds up to 32. With d = 1, 8 would be enough; with d = 0.25 you would need 126.',
+  },
+];
+---
+<ConceptLayout id="errors-power" lang="en" toc={toc}>
+  <Fragment slot="lede">A test can go wrong in two ways: seeing an effect that is not there, or missing one that is. Power is the probability of detecting a real effect, and it depends above all on how much data you have.</Fragment>
+
+  <h2 id="idea">The idea</h2>
+  <p>At the end of a test you decide whether to reject H₀, without knowing whether H₀ is true. There are four possible combinations:</p>
+  <div class="table-wrap">
+    <table class="data-table decision-table">
+      <thead><tr><th></th><th>H₀ is true</th><th>H₀ is false (there is an effect)</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">Reject H₀</th>
+          <td class="bad-cell"><strong>Type I error</strong><span>False positive. Probability α.</span></td>
+          <td class="good-cell"><strong>Correct</strong><span>Probability 1 − β: the power.</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Do not reject H₀</th>
+          <td class="good-cell"><strong>Correct</strong><span>Probability 1 − α.</span></td>
+          <td class="bad-cell"><strong>Type II error</strong><span>False negative. Probability β.</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <Callout label="Key idea">
+    <p>You fix α before looking at the data. Not β: it depends on the true size of the effect, on the variability and on how much data you have.</p>
+  </Callout>
+
+  <h2 id="depends">What power depends on</h2>
+  <p>For a one-sided z-test on a mean, with an effect of size <Tex expr={String.raw`d = \delta/\sigma`} /> (the true difference measured in standard deviations) and <Tex expr={String.raw`n`} /> observations:</p>
+  <Tex display expr={String.raw`\text{power} = 1 - \beta = 1 - \Phi\!\left(z_{1-\alpha} - d\sqrt{n}\right)`} />
+  <p>The term <Tex expr={String.raw`d\sqrt{n}`} /> is how far the statistic shifts when there is an effect. Power grows when:</p>
+  <ul>
+    <li>the effect is larger;</li>
+    <li>there is more data, though only with the square root of n;</li>
+    <li>α is larger: demanding less evidence detects more effects, at the cost of more false positives.</li>
+  </ul>
+  <p>For example, with d = 0.5, n = 25 and α = 0.05, power is 0.80. With α = 0.01 it drops to 0.57, and with n = 10 to 0.47.</p>
+
+  <h2 id="try-it">Try it</h2>
+  <p>The two curves are the distribution of the statistic if H₀ is true and if there is an effect. Move the effect and the sample size, and watch how α, β and power split on each side of the critical value.</p>
+  <PowerExplorer lang="en" />
+
+  <h2 id="sample-size">How much data you need</h2>
+  <p>Solving for n gives the sample size needed for a given power. For a two-sided test:</p>
+  <Tex display expr={String.raw`n = \left(\frac{z_{1-\alpha/2} + z_{1-\beta}}{d}\right)^{2}`} />
+  <p>With α = 0.05 and power 0.80 (critical values 1.96 and 0.84), a large effect, d = 1, needs 8 observations; a medium one, d = 0.5, needs 32; and a small one, d = 0.25, needs 126. Halving the effect multiplies the data needed by four.</p>
+
+  <h2 id="false-positives">Power and false positives</h2>
+  <p>Power also decides how far you can trust a significant result. If only a fraction π of the hypotheses you test correspond to real effects, the share of significant results that are false is:</p>
+  <Tex display expr={String.raw`\frac{\alpha\,(1-\pi)}{\alpha\,(1-\pi) + (1-\beta)\,\pi}`} />
+  <p>With π = 10% and α = 0.05, it is 36% if power is 80%, and 69% if power is 20%. Moreover, when power is low, the effects that do come out significant tend to be overestimated: only the estimates that happened to come out large clear the threshold.</p>
+  <FDRCalculator lang="en" />
+
+  <h2 id="pitfalls">Common mistakes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">“If I do not reject H₀ and power was 80%, there is only a 20% chance that I am wrong.”</span><span class="fix">Power is computed for a specific assumed effect. It is not the probability that your decision is right, which also depends on how many real effects there are among those you test.</span></li>
+    <li><span class="claim">“Computing power after the study, with the observed effect, tells me something new.”</span><span class="fix">That “observed power” is a direct function of the p-value: a high p-value always implies low observed power. It adds no information.</span></li>
+    <li><span class="claim">“A significant result from a small sample is more convincing, because it cleared a hard bar.”</span><span class="fix">It is the other way round: with low power, a larger share of significant results are false positives or exaggerate the effect.</span></li>
+    <li><span class="claim">“Lowering α is always safer.”</span><span class="fix">With n fixed, lowering α reduces false positives but increases false negatives. The balance depends on which error is more costly.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">In deep learning</h2>
+  <ul>
+    <li><strong>Few seeds, little power.</strong> Comparing two architectures with three seeds each has very little power for small differences. A non-significant result does not show that they are equivalent.</li>
+    <li><strong>Test set size.</strong> To detect with power 0.80 an improvement from 0.90 to 0.91 accuracy by comparing independent proportions, you would need about 13,500 examples per group. Evaluating both models on the same test set usually needs fewer, because the paired comparison focuses on the examples where they disagree.</li>
+    <li><strong>Choosing with the test set.</strong> Trying many variants and keeping the one that scores best on test inflates false positives. Select with validation and use the test set once.</li>
+  </ul>
+
+  <h2 id="review">Self-check</h2>
+  <Quiz lang="en" questions={questions} />
+
+  <h2 id="further">Further reading</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.en} <span class="where">§5.1.5 (error types and power) and §5.1.6 (one-sided and two-sided tests).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.en}</a> <span class="where">§5.5.2 (type I and type II errors and the Neyman–Pearson lemma).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.en}</a> <span class="where">§3.10 (hypothesis testing).</span></li>
+    <li><a href="https://doi.org/10.1198/000313001300339897">Hoenig, J. M. and Heisey, D. M. (2001). The Abuse of Power: The Pervasive Fallacy of Power Calculations for Data Analysis. The American Statistician, 55(1), 19–24.</a></li>
+    <li><a href="https://doi.org/10.1038/nrn3475">Button, K. S. et al. (2013). Power failure: why small sample size undermines the reliability of neuroscience. Nature Reviews Neuroscience, 14(5), 365–376.</a></li>
+  </ul>
+</ConceptLayout>

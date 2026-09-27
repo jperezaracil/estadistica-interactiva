@@ -1,0 +1,11 @@
+---
+import Base from '../layouts/Base.astro';
+import { mapUrl } from '../lib/paths';
+---
+<Base lang="es" title="Página no encontrada" alternate={mapUrl('en')}>
+  <main class="wrap map-intro">
+    <p class="eyebrow">404</p>
+    <h1>Esta página no existe todavía</h1>
+    <p class="lede">Puede que el concepto aún esté en preparación. <a href={mapUrl('es')}>Volver al mapa</a> · <a href={mapUrl('en')}>Back to the map</a></p>
+  </main>
+</Base>

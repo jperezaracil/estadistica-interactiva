@@ -1,0 +1,85 @@
+---
+// Share of significant results that are false, given base rate π, power and α.
+import type { Lang } from '../data/areas';
+import { fmt } from '../lib/paths';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const alphas = [0.1, 0.05, 0.01];
+const L = lang === 'es'
+  ? {
+      title: 'Calculadora · ¿cuántos «significativos» son falsos?',
+      pi: 'Hipótesis con efecto real (π)', power: 'Potencia (1 − β)', alpha: 'Nivel de significación α',
+      big: 'Resultados significativos que son falsos', tp: 'verdaderos positivos', fp: 'falsos positivos',
+      text: 'De cada 1000 hipótesis contrastadas, {R} tienen un efecto real y se detectan {TP}; de las {N0} sin efecto, {FP} dan un falso positivo. De los {S} resultados significativos, el {F} son falsos.',
+    }
+  : {
+      title: 'Calculator · how many “significant” results are false?',
+      pi: 'Hypotheses with a real effect (π)', power: 'Power (1 − β)', alpha: 'Significance level α',
+      big: 'Significant results that are false', tp: 'true positives', fp: 'false positives',
+      text: 'Out of 1000 tested hypotheses, {R} have a real effect and {TP} of them are detected; of the {N0} without an effect, {FP} give a false positive. Of the {S} significant results, {F} are false.',
+    };
+---
+<figure class="widget" data-fdr>
+  <p class="widget-title">{L.title}</p>
+  <div class="controls">
+    <label>
+      <span class="control-label">{L.pi}</span>
+      <span class="slider-row"><input type="range" min="1" max="90" step="1" value="10" data-pi /><output data-piout class="wide-out">10</output></span>
+    </label>
+    <label>
+      <span class="control-label">{L.power}</span>
+      <span class="slider-row"><input type="range" min="5" max="99" step="1" value="80" data-pw /><output data-pwout class="wide-out">80</output></span>
+    </label>
+    <div>
+      <span class="control-label" id="fdr-alpha">{L.alpha}</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="fdr-alpha">
+        {alphas.map((a) => <button type="button" role="radio" aria-checked={a === 0.05 ? 'true' : 'false'} data-alpha={a}>{fmt(a, 2, lang)}</button>)}
+      </div>
+    </div>
+  </div>
+  <div class="fdr-result">
+    <span class="stat-label">{L.big}</span>
+    <span class="fdr-big" data-big>–</span>
+  </div>
+  <div class="fdr-bar" aria-hidden="true"><span class="fdr-tp" data-bar-tp></span><span class="fdr-fp" data-bar-fp></span></div>
+  <div class="chart-legend">
+    <span><i class="swatch" style="background: var(--chart-emph)"></i>{L.tp}</span>
+    <span><i class="swatch" style="background: var(--bad)"></i>{L.fp}</span>
+  </div>
+  <p class="fdr-text" data-text aria-live="polite"></p>
+  <script type="application/json" data-cfg set:html={JSON.stringify({ lang, text: L.text })}></script>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-fdr]').forEach((root) => {
+    const cfg = JSON.parse(root.querySelector('[data-cfg]')!.textContent || '{}');
+    const es = cfg.lang === 'es';
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    let alpha = 0.05;
+    const pct = (x: number) => (es ? `${Math.round(x)} %` : `${Math.round(x)}%`);
+    function update() {
+      const pi = Number($<HTMLInputElement>('[data-pi]').value) / 100;
+      const pw = Number($<HTMLInputElement>('[data-pw]').value) / 100;
+      $('[data-piout]').textContent = pct(pi * 100);
+      $('[data-pwout]').textContent = pct(pw * 100);
+      const R = 1000 * pi, N0 = 1000 - R, TP = R * pw, FP = N0 * alpha, S = TP + FP;
+      const share = FP / S;
+      $('[data-big]').textContent = pct(share * 100);
+      $('[data-bar-tp]').style.width = `${(100 * TP) / S}%`;
+      $('[data-bar-fp]').style.width = `${(100 * FP) / S}%`;
+      const r = (x: number) => String(Math.round(x));
+      $('[data-text]').textContent = cfg.text
+        .replace('{R}', r(R)).replace('{TP}', r(TP)).replace('{N0}', r(N0)).replace('{FP}', r(FP))
+        .replace('{S}', r(Math.round(TP) + Math.round(FP))).replace('{F}', pct(share * 100));
+    }
+    root.querySelectorAll('input[type=range]').forEach((i) => i.addEventListener('input', update));
+    const btns = [...root.querySelectorAll<HTMLButtonElement>('[data-alpha]')];
+    btns.forEach((b) => b.addEventListener('click', () => {
+      btns.forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      alpha = Number(b.dataset.alpha);
+      update();
+    }));
+    update();
+  });
+</script>

@@ -1,0 +1,204 @@
+---
+// Binomial p-value explorer: 20 tosses of a coin, H0: p = 0.5.
+import type { Lang } from '../data/areas';
+import { fmt } from '../lib/paths';
+
+interface Props { lang: Lang; initial?: number }
+const { lang, initial = 16 } = Astro.props;
+
+const n = 20;
+const C = (k: number) => { let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return Math.round(r); };
+const P = Array.from({ length: n + 1 }, (_, k) => C(k) / 2 ** n);
+
+// Chart geometry (SVG user units).
+const W = 680, x0 = 48, x1 = 664, band = (x1 - x0) / (n + 1), bw = 18, base = 236, sc = 186 / P[10];
+const bars = P.map((p, k) => {
+  const h = p * sc, x = x0 + k * band + (band - bw) / 2, top = base - h;
+  const d = h >= 4
+    ? `M${x} ${base}V${top + 4}Q${x} ${top} ${x + 4} ${top}H${x + bw - 4}Q${x + bw} ${top} ${x + bw} ${top + 4}V${base}Z`
+    : `M${x} ${base}V${top}H${x + bw}V${base}Z`;
+  return { k, d, cx: x + bw / 2 };
+});
+const grid = [0.05, 0.1, 0.15].map((v) => ({ v, y: base - v * sc }));
+
+const L = lang === 'es'
+  ? {
+      title: 'Interactivo · 20 lanzamientos de una moneda',
+      heads: 'Caras observadas', alpha: 'Nivel de significación α', kind: 'Tipo de contraste',
+      two: 'Bilateral', one: 'Unilateral (caras)',
+      own: 'Cola observada', opp: 'Cola opuesta', pval: 'p-valor',
+      reject: 'Rechazas H₀', keep: 'No rechazas H₀', unused: 'no se usa',
+      hint: 'Toca una barra para ver su probabilidad.', barText: (k: number, p: string) => `${k} ${k === 1 ? 'cara' : 'caras'}: probabilidad ${p} si H₀ es cierta`,
+      overlap: 'Con 10 caras las dos colas se solapan: todos los resultados son al menos igual de extremos, así que p = 1.',
+      yLabel: 'probabilidad', expected: '10 caras: lo esperado si la moneda es justa', observed: 'observado',
+      xLabel: 'número de caras', legendTail: 'al menos tan extremo como lo observado', legendRest: 'resto',
+      caption: 'Probabilidades exactas de la binomial B(20; 0,5). El p-valor es la suma de las barras azules.',
+      aria: 'Distribución del número de caras en 20 lanzamientos si la moneda es justa, con las colas resaltadas',
+    }
+  : {
+      title: 'Interactive · 20 coin tosses',
+      heads: 'Observed heads', alpha: 'Significance level α', kind: 'Type of test',
+      two: 'Two-sided', one: 'One-sided (heads)',
+      own: 'Observed tail', opp: 'Opposite tail', pval: 'p-value',
+      reject: 'Reject H₀', keep: 'Do not reject H₀', unused: 'not used',
+      hint: 'Tap a bar to see its probability.', barText: (k: number, p: string) => `${k} ${k === 1 ? 'head' : 'heads'}: probability ${p} if H₀ is true`,
+      overlap: 'With 10 heads both tails overlap: every outcome is at least as extreme, so p = 1.',
+      yLabel: 'probability', expected: '10 heads: expected if the coin is fair', observed: 'observed',
+      xLabel: 'number of heads', legendTail: 'at least as extreme as observed', legendRest: 'rest',
+      caption: 'Exact binomial probabilities, B(20, 0.5). The p-value is the sum of the blue bars.',
+      aria: 'Distribution of the number of heads in 20 tosses of a fair coin, with the tails highlighted',
+    };
+const i18n = { lang, reject: L.reject, keep: L.keep, unused: L.unused, hint: L.hint, overlap: L.overlap, barTexts: P.map((_, k) => L.barText(k, '§')) };
+const alphas = [0.1, 0.05, 0.01];
+---
+<figure class="widget" data-explorer>
+  <p class="widget-title">{L.title}</p>
+  <div class="controls">
+    <label>
+      <span class="control-label">{L.heads}</span>
+      <span class="slider-row">
+        <input type="range" min="0" max="20" step="1" value={initial} data-k aria-describedby="pv-readout" />
+        <output data-kout>{initial}</output>
+      </span>
+    </label>
+    <div>
+      <span class="control-label" id="pv-alpha">{L.alpha}</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="pv-alpha">
+        {alphas.map((a) => (
+          <button type="button" role="radio" aria-checked={a === 0.05 ? 'true' : 'false'} data-alpha={a}>{fmt(a, 2, lang)}</button>
+        ))}
+      </div>
+    </div>
+    <div>
+      <span class="control-label" id="pv-kind">{L.kind}</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="pv-kind">
+        <button type="button" role="radio" aria-checked="true" data-kind="two">{L.two}</button>
+        <button type="button" role="radio" aria-checked="false" data-kind="one">{L.one}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span class="stat-label">{L.own}</span><span class="stat-value" data-own>–</span></div>
+    <div class="stat"><span class="stat-label">{L.opp}</span><span class="stat-value" data-opp>–</span></div>
+    <div class="stat"><span class="stat-label">{L.pval}</span><span class="stat-value" data-p>–</span></div>
+    <div class="decision" data-decision aria-live="polite"><span class="decision-value" data-dec>–</span><span class="decision-sub" data-decsub></span></div>
+  </div>
+
+  <p class="readout" id="pv-readout" data-readout>{L.hint}</p>
+
+  <svg class="chart" viewBox={`0 0 ${W} 300`} role="img" aria-label={L.aria}>
+    <text class="tick" x="8" y="20">{L.yLabel}</text>
+    {grid.map((g) => (
+      <>
+        <line class="grid" x1={x0} x2={x1} y1={g.y} y2={g.y} />
+        <text class="tick" x={x0 - 8} y={g.y + 4} text-anchor="end">{fmt(g.v, 2, lang)}</text>
+      </>
+    ))}
+    <text class="tick" x={x0 - 8} y={base + 4} text-anchor="end">0</text>
+    <g data-bars>
+      {bars.map((b) => <path class="bar" d={b.d} data-k={b.k} />)}
+    </g>
+    <line class="axis" x1={x0} x2={x1} y1={base} y2={base} />
+    <g data-ticks>
+      {bars.map((b) => <text class="tick" x={b.cx} y={base + 18} text-anchor="middle" data-t={b.k}>{b.k}</text>)}
+    </g>
+    <text class="note" x={bars[10].cx} y={base - 186 - 10} text-anchor="middle">{L.expected}</text>
+    <g data-obs>
+      <path d="M0 0l-6 8h12z" class="bar tail" transform={`translate(${bars[initial].cx} ${base + 26})`} data-caret />
+      <text class="note-strong" x={bars[initial].cx} y={base + 50} text-anchor="middle" data-obs-label>{L.observed}</text>
+    </g>
+    <g data-hits>
+      {bars.map((b) => <rect x={x0 + b.k * band} y="40" width={band} height={base - 40 + 22} fill="transparent" data-hit={b.k} />)}
+    </g>
+  </svg>
+  <div class="chart-legend">
+    <span><i class="swatch" style="background: var(--chart-emph)"></i>{L.legendTail}</span>
+    <span><i class="swatch" style="background: var(--chart-rest)"></i>{L.legendRest}</span>
+  </div>
+  <figcaption>{L.caption}</figcaption>
+  <script type="application/json" data-i18n set:html={JSON.stringify({ ...i18n, P, cx: bars.map((b) => b.cx), base })}></script>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-explorer]').forEach((root) => {
+    const cfg = JSON.parse(root.querySelector('[data-i18n]')!.textContent || '{}');
+    const P: number[] = cfg.P;
+    const es = cfg.lang === 'es';
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const slider = $<HTMLInputElement>('[data-k]');
+    const kout = $('[data-kout]');
+    const bars = [...root.querySelectorAll<SVGPathElement>('[data-bars] path')];
+    const ticks = [...root.querySelectorAll<SVGTextElement>('[data-ticks] text')];
+    const caret = $<SVGPathElement>('[data-caret]');
+    const obsLabel = $<SVGTextElement>('[data-obs-label]');
+    const readout = $('[data-readout]');
+    let alpha = 0.05, kind: 'two' | 'one' = 'two', hot = -1;
+
+    const dec = (s: string) => (es ? s.replace('.', ',') : s);
+    function fp(p: number) {
+      if (p > 0.9995) return '1';
+      if (p >= 0.01) return dec(p.toFixed(3));
+      if (p >= 1e-6) return dec(String(Number(p.toPrecision(2))));
+      return dec(p.toFixed(7));
+    }
+    const fa = (a: number) => dec(a.toFixed(2));
+
+    function update() {
+      const k = Number(slider.value);
+      kout.textContent = String(k);
+      const d = Math.abs(k - 10);
+      let pval = 0, own = 0, opp = 0;
+      bars.forEach((bar, x) => {
+        const tail = kind === 'two' ? Math.abs(x - 10) >= d : x >= k;
+        if (tail) pval += P[x];
+        bar.classList.toggle('tail', tail);
+        bar.classList.toggle('hot', x === hot);
+        ticks[x].classList.toggle('obs', x === k);
+        if (kind === 'two') {
+          if (k >= 10 ? x >= k : x <= k) own += P[x];
+          if (k >= 10 ? x <= 20 - k : x >= 20 - k) opp += P[x];
+        } else if (x >= k) own += P[x];
+      });
+      pval = Math.min(1, pval);
+      $('[data-own]').textContent = fp(own);
+      $('[data-opp]').textContent = kind === 'two' ? fp(opp) : cfg.unused;
+      $('[data-p]').textContent = fp(pval);
+      const reject = pval <= alpha;
+      $('[data-dec]').textContent = reject ? cfg.reject : cfg.keep;
+      $('[data-decsub]').textContent = `p = ${fp(pval)} ${reject ? '≤' : '>'} α = ${fa(alpha)}`;
+      $('[data-decision]').dataset.state = reject ? 'reject' : 'keep';
+      const cx = cfg.cx[k];
+      caret.setAttribute('transform', `translate(${cx} ${cfg.base + 26})`);
+      obsLabel.setAttribute('x', String(Math.min(640, Math.max(40, cx))));
+      if (hot < 0) readout.textContent = kind === 'two' && k === 10 ? cfg.overlap : cfg.hint;
+    }
+
+    function segmented(sel: string, set: (v: string) => void) {
+      const btns = [...root.querySelectorAll<HTMLButtonElement>(sel)];
+      btns.forEach((b) => b.addEventListener('click', () => {
+        btns.forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+        set(b.dataset.alpha ?? b.dataset.kind!);
+        update();
+      }));
+    }
+    segmented('[data-alpha]', (v) => (alpha = Number(v)));
+    segmented('[data-kind]', (v) => (kind = v as 'two' | 'one'));
+    slider.addEventListener('input', () => { hot = -1; update(); });
+
+    root.querySelectorAll<SVGRectElement>('[data-hit]').forEach((r) => {
+      const k = Number(r.dataset.hit);
+      const show = () => {
+        hot = k;
+        readout.textContent = cfg.barTexts[k].replace('§', fp(P[k]));
+        update();
+      };
+      r.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') show(); });
+      r.addEventListener('click', show);
+    });
+    root.querySelector('[data-hits]')!.addEventListener('pointerleave', (e) => {
+      if ((e as PointerEvent).pointerType === 'mouse') { hot = -1; update(); }
+    });
+    update();
+  });
+</script>

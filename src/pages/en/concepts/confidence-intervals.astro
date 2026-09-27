@@ -1,0 +1,113 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import CICoverage from '../../../components/CICoverage.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+import { conceptById } from '../../../data/concepts';
+import { conceptUrl } from '../../../lib/paths';
+
+const pvalue = conceptUrl(conceptById['hypothesis-testing'], 'en');
+
+const toc = [
+  { id: 'idea', label: 'The idea' },
+  { id: 'construction', label: 'How it is built' },
+  { id: 'try-it', label: 'Try it' },
+  { id: 'meaning', label: 'What the 95% means' },
+  { id: 'tests', label: 'Link with hypothesis tests' },
+  { id: 'example', label: 'An example with a model' },
+  { id: 'pitfalls', label: 'Common mistakes' },
+  { id: 'deep-learning', label: 'In deep learning' },
+  { id: 'review', label: 'Self-check' },
+  { id: 'further', label: 'Further reading' },
+];
+
+const questions = [
+  {
+    prompt: 'You compute a 95% CI for a mean and get [4.1, 5.3]. Which statement is correct?',
+    options: [
+      { text: 'There is a 95% probability that the true mean lies between 4.1 and 5.3.' },
+      { text: 'The method you used captures the true mean in 95% of possible samples.', correct: true },
+      { text: '95% of the data lie between 4.1 and 5.3.' },
+    ],
+    explain: 'The 95% describes the procedure. The first option is the Bayesian reading, and the third confuses the interval for the mean with the spread of the data.',
+  },
+  {
+    prompt: 'If you multiply the sample size by four, what happens to the width of the interval?',
+    options: [
+      { text: 'It is halved.', correct: true },
+      { text: 'It is divided by four.' },
+      { text: 'It does not change.' },
+    ],
+    explain: 'The width is proportional to 1/√n, and √4 = 2.',
+  },
+  {
+    prompt: 'Two models get 0.90 and 0.91 accuracy on the same 1000-example test set, and their 95% CIs overlap. What do you conclude?',
+    options: [
+      { text: 'The difference is not significant, because the intervals overlap.' },
+      { text: 'The difference has to be analysed directly, with a paired test or bootstrap.', correct: true },
+      { text: 'The model with 0.91 is better.' },
+    ],
+    explain: 'Whether two intervals overlap does not decide whether the difference is significant. Besides, the results are paired: both models are evaluated on the same examples.',
+  },
+];
+---
+<ConceptLayout id="confidence-intervals" lang="en" toc={toc}>
+  <Fragment slot="lede">A confidence interval gives a range of values compatible with the data. Its “95%” describes the method used to build it, not the particular interval you computed.</Fragment>
+
+  <h2 id="idea">The idea</h2>
+  <p>When you estimate something from a sample (a mean, a proportion, a model’s accuracy), the number you get is not the true value: another sample would give another number. A confidence interval pairs the estimate with a margin that reflects that sample-to-sample variability.</p>
+  <Callout label="Key idea">
+    <p>If you repeated the study many times and computed a 95% CI each time, 95% of those intervals would contain the true value. A particular interval, once computed, either contains it or does not.</p>
+  </Callout>
+
+  <h2 id="construction">How it is built</h2>
+  <p>The recipe is almost always the same: estimate ± critical value × standard error. For the mean of a variable with known standard deviation σ:</p>
+  <Tex display expr={String.raw`\bar{x} \pm z_{1-\alpha/2}\,\frac{\sigma}{\sqrt{n}}, \qquad z_{0.975} = 1.96`} />
+  <p>If σ is unknown, it is replaced by the sample standard deviation <Tex expr={String.raw`s`} />, and the normal critical value by that of a Student t with <Tex expr={String.raw`n-1`} /> degrees of freedom. Two practical consequences:</p>
+  <ul>
+    <li>More confidence requires wider intervals: at 99% the critical value is 2.58 instead of 1.96.</li>
+    <li>The width shrinks with <Tex expr={String.raw`\sqrt{n}`} />: halving it takes four times as much data.</li>
+  </ul>
+
+  <h2 id="try-it">Try it</h2>
+  <p>Each sample produces a different interval. Draw many and check what fraction contains the true value μ = 50; then change the confidence level and the sample size.</p>
+  <CICoverage lang="en" />
+  <p>With n = 20 the 95% half-width is ±4.38; with n = 80 it is ±2.19. Four times the data, half the width.</p>
+
+  <h2 id="meaning">What the 95% means</h2>
+  <p>The 95% probability refers to the procedure, before seeing the data. Once computed, the interval is fixed and so is the parameter: there is nothing random left to talk about. The sentence “there is a 95% probability that the parameter lies between a and b” belongs to a Bayesian credible interval, which needs a prior distribution. In simple cases with weakly informative priors both intervals can coincide numerically, but they answer different questions.</p>
+
+  <h2 id="tests">Link with hypothesis tests</h2>
+  <p>A 95% CI gathers the parameter values that a two-sided test at α = 0.05 would not reject, when both are built with the same method. That is why the interval carries the information of the test and more: the size of the effect and how precisely it is estimated. In the coin example of <a href={pvalue}>hypothesis testing and p-values</a>, with 16 heads out of 20 the exact 95% CI is [0.56, 0.94] and excludes 0.5, just as the test rejects H₀.</p>
+
+  <h2 id="example">An example with a model</h2>
+  <p>A classifier gets 900 of 1000 test examples right: accuracy 0.90. The exact 95% CI (Clopper–Pearson) runs from 0.880 to 0.918. With a test set of that size, one-point differences between models fall within the uncertainty of each estimate; to compare them, the difference has to be analysed directly.</p>
+
+  <h2 id="pitfalls">Common mistakes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">“There is a 95% probability that the true value lies in this interval.”</span><span class="fix">That describes a Bayesian credible interval. In the frequentist approach, the 95% is a property of the method.</span></li>
+    <li><span class="claim">“95% of the data lie inside the interval.”</span><span class="fix">The interval for the mean is much narrower than the spread of the data: it shrinks with √n, and the spread of the data does not.</span></li>
+    <li><span class="claim">“95% of future estimates will fall inside this interval.”</span><span class="fix">That would be a prediction interval, which is wider because it must also cover the variability of the future estimate.</span></li>
+    <li><span class="claim">“If two intervals overlap, the difference is not significant.”</span><span class="fix">Not necessarily. With two independent estimates with standard error 1 that differ by 3, the 95% CIs (±1.96) overlap, yet the test of the difference gives p = 0.034. To compare, compute the interval of the difference.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">In deep learning</h2>
+  <ul>
+    <li><strong>Metrics with their interval.</strong> Test accuracy is an estimate: report it with its interval. For metrics without a simple formula (F1, AUC, BLEU), bootstrap over the test examples.</li>
+    <li><strong>Seeds.</strong> The standard deviation across runs describes how much training varies; the CI of the mean describes how well you know the mean. With 5 seeds, the 95% CI of the mean is the mean ± 2.78 · s/√5, that is, ± 1.24 · s.</li>
+    <li><strong>Comparing models.</strong> If two models are evaluated on the same test set, compute the interval of the difference with a paired bootstrap, instead of checking whether each model’s interval overlaps the other.</li>
+  </ul>
+
+  <h2 id="review">Self-check</h2>
+  <Quiz lang="en" questions={questions} />
+
+  <h2 id="further">Further reading</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.en} <span class="where">§5.1.7 (confidence intervals by inverting hypothesis tests) and §5.3 (bootstrap).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.en}</a> <span class="where">§4.7.3–4.7.5 (bootstrap, confidence intervals and why they are not credible intervals) and §4.6.6 (credible intervals).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.en}</a> <span class="where">§3.3 (frequentist statistics).</span></li>
+    <li><a href="https://doi.org/10.1007/s10654-016-0149-3">Greenland, S. et al. (2016). Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations. European Journal of Epidemiology, 31(4), 337–350.</a></li>
+  </ul>
+</ConceptLayout>

@@ -1,0 +1,134 @@
+---
+// Coverage simulation: repeated samples from N(50, 10²), z-intervals with known σ.
+import type { Lang } from '../data/areas';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const W = 680, H = 372, x0 = 40, x1 = 660, lo = 30, hi = 70, top = 26, rowH = 7.4, rows = 40;
+const sx = (v: number) => x0 + ((v - lo) / (hi - lo)) * (x1 - x0);
+const axisY = top + rows * rowH + 10;
+const ticks = [30, 35, 40, 45, 50, 55, 60, 65, 70].map((v) => ({ v, x: sx(v) }));
+const levels = [0.8, 0.9, 0.95, 0.99];
+
+const L = lang === 'es'
+  ? {
+      title: 'Interactivo · cobertura de los intervalos',
+      n: 'Tamaño de la muestra (n)', level: 'Nivel de confianza',
+      one: 'Otra muestra', many: '20 muestras más', reset: 'Reiniciar',
+      total: 'Intervalos generados', hits: 'Contienen μ', half: 'Semianchura',
+      legendHit: 'contiene μ', legendMiss: 'no contiene μ', mu: 'μ = 50 (valor real)',
+      caption: 'Cada línea es el IC calculado con una muestra de tamaño n de una población con μ = 50 y σ = 10 conocida; el punto es la media muestral. Se muestran los 40 últimos.',
+      aria: 'Intervalos de confianza de muchas muestras alrededor del valor real 50',
+      pct: (x: number) => `${x.toFixed(1).replace('.', ',')} %`,
+    }
+  : {
+      title: 'Interactive · interval coverage',
+      n: 'Sample size (n)', level: 'Confidence level',
+      one: 'One more sample', many: '20 more samples', reset: 'Reset',
+      total: 'Intervals drawn', hits: 'Contain μ', half: 'Half-width',
+      legendHit: 'contains μ', legendMiss: 'misses μ', mu: 'μ = 50 (true value)',
+      caption: 'Each line is the CI computed from a sample of size n drawn from a population with μ = 50 and known σ = 10; the dot is the sample mean. The last 40 are shown.',
+      aria: 'Confidence intervals from many samples around the true value 50',
+      pct: (x: number) => `${x.toFixed(1)}%`,
+    };
+const levelLabel = (l: number) => (lang === 'es' ? `${Math.round(l * 100)} %` : `${Math.round(l * 100)}%`);
+---
+<figure class="widget" data-ci>
+  <p class="widget-title">{L.title}</p>
+  <div class="controls controls-2">
+    <label>
+      <span class="control-label">{L.n}</span>
+      <span class="slider-row">
+        <input type="range" min="5" max="100" step="1" value="20" data-n />
+        <output data-nout>20</output>
+      </span>
+    </label>
+    <div>
+      <span class="control-label" id="ci-level">{L.level}</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="ci-level">
+        {levels.map((l) => <button type="button" role="radio" aria-checked={l === 0.95 ? 'true' : 'false'} data-level={l}>{levelLabel(l)}</button>)}
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn" data-add="1">{L.one}</button>
+      <button type="button" class="btn" data-add="20">{L.many}</button>
+      <button type="button" class="btn btn-quiet" data-reset>{L.reset}</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-label">{L.total}</span><span class="stat-value" data-total>–</span></div>
+    <div class="stat"><span class="stat-label">{L.hits}</span><span class="stat-value" data-hits>–</span></div>
+    <div class="stat"><span class="stat-label">{L.half}</span><span class="stat-value" data-half>–</span></div>
+  </div>
+  <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={L.aria}>
+    <text class="note-strong" x={sx(50)} y="14" text-anchor="middle">{L.mu}</text>
+    <line class="mu-line" x1={sx(50)} x2={sx(50)} y1="20" y2={axisY} />
+    <g data-rows></g>
+    <line class="axis" x1={x0} x2={x1} y1={axisY} y2={axisY} />
+    {ticks.map((t) => <text class="tick" x={t.x} y={axisY + 18} text-anchor="middle">{t.v}</text>)}
+  </svg>
+  <div class="chart-legend">
+    <span><i class="swatch" style="background: var(--chart-emph)"></i>{L.legendHit}</span>
+    <span><i class="swatch" style="background: var(--bad)"></i>{L.legendMiss}</span>
+  </div>
+  <figcaption>{L.caption}</figcaption>
+  <script type="application/json" data-cfg set:html={JSON.stringify({ lang, x0, x1, lo, hi, top, rowH, rows })}></script>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-ci]').forEach((root) => {
+    const cfg = JSON.parse(root.querySelector('[data-cfg]')!.textContent || '{}');
+    const es = cfg.lang === 'es';
+    const Z: Record<string, number> = { '0.8': 1.2816, '0.9': 1.6449, '0.95': 1.96, '0.99': 2.5758 };
+    const mu = 50, sigma = 10;
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const slider = $<HTMLInputElement>('[data-n]');
+    const rowsG = $<SVGGElement>('[data-rows]');
+    let n = 20, level = '0.95';
+    let means: number[] = [];
+    const sx = (v: number) => cfg.x0 + ((Math.min(cfg.hi, Math.max(cfg.lo, v)) - cfg.lo) / (cfg.hi - cfg.lo)) * (cfg.x1 - cfg.x0);
+    const dec = (s: string) => (es ? s.replace('.', ',') : s);
+    function randn() {
+      let u = 0;
+      while (u === 0) u = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+    }
+    function add(k: number) {
+      for (let i = 0; i < k; i++) means.push(mu + (sigma / Math.sqrt(n)) * randn());
+      if (means.length > 2000) means = means.slice(-2000);
+      render();
+    }
+    function render() {
+      const h = (Z[level] * sigma) / Math.sqrt(n);
+      const hits = means.filter((m) => Math.abs(m - mu) <= h).length;
+      $('[data-total]').textContent = String(means.length);
+      const pct = means.length ? (100 * hits) / means.length : 0;
+      $('[data-hits]').textContent = means.length ? `${hits} · ${es ? pct.toFixed(1).replace('.', ',') + ' %' : pct.toFixed(1) + '%'}` : '–';
+      $('[data-half]').textContent = '± ' + dec(h.toFixed(2));
+      const shown = means.slice(-cfg.rows).reverse();
+      rowsG.innerHTML = shown
+        .map((m, i) => {
+          const y = (cfg.top + i * cfg.rowH + cfg.rowH / 2).toFixed(1);
+          const cls = Math.abs(m - mu) <= h ? 'hit' : 'miss';
+          return `<line class="ci ${cls}" x1="${sx(m - h).toFixed(1)}" x2="${sx(m + h).toFixed(1)}" y1="${y}" y2="${y}"/><circle class="ci-dot ${cls}" cx="${sx(m).toFixed(1)}" cy="${y}" r="2.6"/>`;
+        })
+        .join('');
+    }
+    slider.addEventListener('input', () => {
+      n = Number(slider.value);
+      $('[data-nout]').textContent = String(n);
+      means = [];
+      add(20);
+    });
+    const levelBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-level]')];
+    levelBtns.forEach((b) => b.addEventListener('click', () => {
+      levelBtns.forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      level = b.dataset.level!;
+      render();
+    }));
+    root.querySelectorAll<HTMLButtonElement>('[data-add]').forEach((b) => b.addEventListener('click', () => add(Number(b.dataset.add))));
+    $('[data-reset]').addEventListener('click', () => { means = []; add(20); });
+    add(20);
+  });
+</script>

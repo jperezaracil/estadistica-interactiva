@@ -1,0 +1,76 @@
+---
+import Base from '../layouts/Base.astro';
+import type { Lang } from '../data/areas';
+import { areaById } from '../data/areas';
+import { conceptById, dependentsOf } from '../data/concepts';
+import { formatRef } from '../data/books';
+import { ui } from '../i18n/ui';
+import { conceptUrl, mapUrl } from '../lib/paths';
+
+interface Props {
+  id: string;
+  lang: Lang;
+  toc: { id: string; label: string }[];
+  description?: string;
+}
+const { id, lang, toc, description } = Astro.props;
+const t = ui[lang];
+const other: Lang = lang === 'es' ? 'en' : 'es';
+const c = conceptById[id];
+const area = areaById[c.area];
+const alternate = conceptUrl(c, other) ?? mapUrl(other, id);
+const link = (cid: string) => {
+  const k = conceptById[cid];
+  return { href: conceptUrl(k, lang) ?? mapUrl(lang, cid), title: k.title[lang], slot: areaById[k.area].slot };
+};
+const prereqs = c.prereqs.map(link);
+const dependents = dependentsOf(id).map(link);
+---
+<Base lang={lang} title={c.title[lang]} description={description ?? c.short[lang]} alternate={alternate} showMapLink>
+  <main class="wrap">
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href={mapUrl(lang, id)}><span aria-hidden="true">←</span> {t.backToMap}</a>
+      <span class="area-tag" style={`--area: var(--area-${area.slot})`}><span class="area-dot" aria-hidden="true"></span>{area[lang]}</span>
+      {c.dl && <span class="badge-dl" title={t.dlBadgeTitle}>DL</span>}
+    </nav>
+    <header class="concept-head">
+      <h1>{c.title[lang]}</h1>
+      <p class="lede"><slot name="lede" /></p>
+    </header>
+    <div class="concept-grid">
+      <article class="prose">
+        <slot />
+      </article>
+      <aside class="rail">
+        <div class="rail-block toc-block">
+          <h2>{t.onThisPage}</h2>
+          <ol class="toc">
+            {toc.map((s) => <li><a href={`#${s.id}`}>{s.label}</a></li>)}
+          </ol>
+        </div>
+        <div class="rail-block">
+          <h2>{t.panelPrereqs}</h2>
+          <div class="mini-chips">
+            {prereqs.length ? prereqs.map((p) => (
+              <a class="mini-chip" href={p.href}><span class="area-dot" style={`--area: var(--area-${p.slot})`}></span>{p.title}</a>
+            )) : <p class="muted-note">{t.panelNone}</p>}
+          </div>
+        </div>
+        <div class="rail-block">
+          <h2>{t.panelDependents}</h2>
+          <div class="mini-chips">
+            {dependents.map((p) => (
+              <a class="mini-chip" href={p.href}><span class="area-dot" style={`--area: var(--area-${p.slot})`}></span>{p.title}</a>
+            ))}
+          </div>
+        </div>
+        <div class="rail-block">
+          <h2>{t.panelBooks}</h2>
+          <ul class="ref-list">
+            {c.refs.map((r) => <li>{formatRef(r, lang)}</li>)}
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+</Base>

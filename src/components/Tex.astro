@@ -1,0 +1,12 @@
+---
+// Build-time KaTeX: no math JavaScript is shipped to the browser.
+import katex from 'katex';
+
+interface Props {
+  expr: string;
+  display?: boolean;
+}
+const { expr, display = false } = Astro.props;
+const html = katex.renderToString(expr, { displayMode: display, throwOnError: true });
+---
+{display ? <div class="math-display" set:html={html}></div> : <span set:html={html}></span>}

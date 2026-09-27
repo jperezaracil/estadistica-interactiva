@@ -1,0 +1,105 @@
+---
+import '@fontsource-variable/source-serif-4/opsz.css';
+import '@fontsource-variable/source-serif-4/opsz-italic.css';
+import '@fontsource-variable/inter/wght.css';
+import 'katex/dist/katex.min.css';
+import '../styles/global.css';
+import type { Lang } from '../data/areas';
+import { ui } from '../i18n/ui';
+import { url, mapUrl } from '../lib/paths';
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  description?: string;
+  /** URL of the same page in the other language. */
+  alternate: string;
+  showMapLink?: boolean;
+}
+const { lang, title, description, alternate, showMapLink = false } = Astro.props;
+const t = ui[lang];
+const other: Lang = lang === 'es' ? 'en' : 'es';
+const pageTitle = title ? `${title} · ${t.siteName}` : t.siteName;
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description ?? t.siteDescription} />
+    <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href={url('manifest.webmanifest')} />
+    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={url('icons/apple-touch-icon.png')} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={lang === 'es' ? 'Estadística' : 'Statistics'} />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="alternate" hreflang={other} href={alternate} />
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href={mapUrl(lang)} aria-label={t.siteName}>
+          <img src={url('favicon.svg')} width="30" height="30" alt="" />
+          <span class="brand-name">{t.siteName}</span>
+          <span class="brand-tag">{t.prototype}</span>
+        </a>
+        <nav class="header-actions">
+          {showMapLink && (
+            <a class="text-btn" href={mapUrl(lang)}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" /></svg>
+              <span>{t.navMap}</span>
+            </a>
+          )}
+          <a class="text-btn lang-switch" href={alternate} hreflang={other} lang={other} data-lang-switch={other}>{t.switchTo}</a>
+          <button class="icon-btn" type="button" data-theme-toggle aria-label={t.themeToggle} title={t.themeToggle}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" /></svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div class="wrap">
+        <span>{t.footer}</span>
+        <span>v0.1</span>
+      </div>
+    </footer>
+    <script>
+      const root = document.documentElement;
+      function syncThemeColor() {
+        const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+        document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', bg));
+      }
+      if (root.dataset.theme) syncThemeColor();
+      document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+        const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try { localStorage.setItem('theme', next); } catch {}
+        syncThemeColor();
+      });
+      document.querySelectorAll<HTMLAnchorElement>('[data-lang-switch]').forEach((a) =>
+        a.addEventListener('click', () => {
+          try { localStorage.setItem('lang', a.dataset.langSwitch || ''); } catch {}
+        }),
+      );
+      if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register(import.meta.env.BASE_URL.replace(/\/?$/, '/') + 'sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

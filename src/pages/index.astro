@@ -1,0 +1,32 @@
+---
+// Entry point (also the PWA start_url): sends the visitor to their language.
+import { url } from '../lib/paths';
+const base = url();
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Estadística interactiva · Interactive Statistics</title>
+    <link rel="manifest" href={url('manifest.webmanifest')} />
+    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={url('icons/apple-touch-icon.png')} />
+    <meta name="theme-color" content="#f6f4ef" />
+    <script is:inline define:vars={{ base }}>
+      var lang = null;
+      try { lang = localStorage.getItem('lang'); } catch (e) {}
+      if (lang !== 'es' && lang !== 'en') {
+        lang = (navigator.language || 'es').toLowerCase().indexOf('es') === 0 ? 'es' : 'en';
+      }
+      location.replace(base + lang + '/');
+    </script>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #f6f4ef; color: #1c1b19; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+      a { color: #2456a8; margin: 0 12px; font-size: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <p><a href={url('es/')}>Español</a><a href={url('en/')}>English</a></p>
+  </body>
+</html>

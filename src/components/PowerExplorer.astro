@@ -1,0 +1,149 @@
+---
+// One-sided z-test: H0 ~ N(0,1) vs H1 ~ N(d·√n, 1) for the test statistic.
+import type { Lang } from '../data/areas';
+import { fmt } from '../lib/paths';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const W = 680, H = 300, x0 = 40, x1 = 660, lo = -4, hi = 8, base = 246;
+const sx = (v: number) => x0 + ((v - lo) / (hi - lo)) * (x1 - x0);
+const ticks = [-4, -2, 0, 2, 4, 6, 8].map((v) => ({ v, x: sx(v) }));
+const alphas = [0.1, 0.05, 0.01];
+
+const L = lang === 'es'
+  ? {
+      title: 'Interactivo · potencia de un contraste z unilateral',
+      d: 'Tamaño del efecto d = δ/σ', n: 'Tamaño de la muestra (n)', alpha: 'Nivel de significación α',
+      a: 'α · falso positivo', b: 'β · falso negativo', p: 'Potencia · 1 − β',
+      note: (zc: string, lam: string) => `Valor crítico z = ${zc} · desplazamiento del estadístico si hay efecto: d·√n = ${lam}`,
+      crit: 'valor crítico', xlab: 'estadístico z',
+      caption: 'Curva gris: distribución del estadístico si H₀ es cierta. Curva azul: si hay un efecto de tamaño d. Se rechaza H₀ a la derecha del valor crítico.',
+      aria: 'Distribuciones del estadístico bajo H0 y bajo H1 con las áreas alfa, beta y potencia sombreadas',
+    }
+  : {
+      title: 'Interactive · power of a one-sided z-test',
+      d: 'Effect size d = δ/σ', n: 'Sample size (n)', alpha: 'Significance level α',
+      a: 'α · false positive', b: 'β · false negative', p: 'Power · 1 − β',
+      note: (zc: string, lam: string) => `Critical value z = ${zc} · shift of the statistic under the effect: d·√n = ${lam}`,
+      crit: 'critical value', xlab: 'z statistic',
+      caption: 'Grey curve: distribution of the statistic if H₀ is true. Blue curve: if there is an effect of size d. H₀ is rejected to the right of the critical value.',
+      aria: 'Distributions of the statistic under H0 and H1 with the alpha, beta and power areas shaded',
+    };
+const noteTpl = L.note('§1', '§2');
+---
+<figure class="widget" data-power>
+  <p class="widget-title">{L.title}</p>
+  <div class="controls">
+    <label>
+      <span class="control-label">{L.d}</span>
+      <span class="slider-row">
+        <input type="range" min="0" max="1.2" step="0.05" value="0.5" data-d />
+        <output data-dout>{fmt(0.5, 2, lang)}</output>
+      </span>
+    </label>
+    <label>
+      <span class="control-label">{L.n}</span>
+      <span class="slider-row">
+        <input type="range" min="4" max="100" step="1" value="25" data-n />
+        <output data-nout>25</output>
+      </span>
+    </label>
+    <div>
+      <span class="control-label" id="pw-alpha">{L.alpha}</span>
+      <div class="segmented" role="radiogroup" aria-labelledby="pw-alpha">
+        {alphas.map((a) => <button type="button" role="radio" aria-checked={a === 0.05 ? 'true' : 'false'} data-alpha={a}>{fmt(a, 2, lang)}</button>)}
+      </div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-label"><i class="swatch" style="background: var(--bad)"></i> {L.a}</span><span class="stat-value" data-va>–</span></div>
+    <div class="stat"><span class="stat-label"><i class="swatch" style="background: var(--area-4)"></i> {L.b}</span><span class="stat-value" data-vb>–</span></div>
+    <div class="stat"><span class="stat-label"><i class="swatch" style="background: var(--chart-emph)"></i> {L.p}</span><span class="stat-value" data-vp>–</span></div>
+  </div>
+  <p class="readout" data-note></p>
+  <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={L.aria}>
+    <path class="area area-beta" data-ab />
+    <path class="area area-power" data-ap />
+    <path class="area area-alpha" data-aa />
+    <path class="curve curve-h0" data-h0 />
+    <path class="curve curve-h1" data-h1 />
+    <line class="crit" data-crit y1="30" y2={base} />
+    <text class="note" data-crit-label y="22" text-anchor="middle">{L.crit}</text>
+    <text class="note-strong" data-h0-label y="40" text-anchor="middle">H₀</text>
+    <text class="note-strong" data-h1-label y="40" text-anchor="middle">H₁</text>
+    <line class="axis" x1={x0} x2={x1} y1={base} y2={base} />
+    {ticks.map((t) => <text class="tick" x={t.x} y={base + 18} text-anchor="middle">{t.v}</text>)}
+    <text class="tick" x={x1} y={base + 38} text-anchor="end">{L.xlab}</text>
+  </svg>
+  <figcaption>{L.caption}</figcaption>
+  <script type="application/json" data-cfg set:html={JSON.stringify({ lang, x0, x1, lo, hi, base, noteTpl })}></script>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-power]').forEach((root) => {
+    const cfg = JSON.parse(root.querySelector('[data-cfg]')!.textContent || '{}');
+    const es = cfg.lang === 'es';
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const ZC: Record<string, number> = { '0.1': 1.2816, '0.05': 1.6449, '0.01': 2.3263 };
+    let alpha = '0.05';
+    const sy = 180 / 0.39894;
+    const sx = (v: number) => cfg.x0 + ((v - cfg.lo) / (cfg.hi - cfg.lo)) * (cfg.x1 - cfg.x0);
+    const y = (dens: number) => cfg.base - dens * sy;
+    const pdf = (x: number, m: number) => Math.exp(-0.5 * (x - m) ** 2) / Math.sqrt(2 * Math.PI);
+    function erf(x: number) {
+      const s = Math.sign(x); x = Math.abs(x);
+      const t = 1 / (1 + 0.3275911 * x);
+      const p = ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
+      return s * (1 - p * Math.exp(-x * x));
+    }
+    const Phi = (x: number) => 0.5 * (1 + erf(x / Math.SQRT2));
+    const dec = (s: string) => (es ? s.replace('.', ',') : s);
+    function curve(m: number, a: number, b: number) {
+      const pts: string[] = [];
+      const step = 0.05;
+      for (let x = a; x <= b + 1e-9; x += step) pts.push(`${sx(x).toFixed(1)} ${y(pdf(x, m)).toFixed(1)}`);
+      pts.push(`${sx(b).toFixed(1)} ${y(pdf(b, m)).toFixed(1)}`);
+      return pts;
+    }
+    const line = (pts: string[]) => 'M' + pts.join('L');
+    const area = (m: number, a: number, b: number) => {
+      if (b <= a) return '';
+      const pts = curve(m, a, b);
+      return `M${sx(a).toFixed(1)} ${cfg.base}L${pts.join('L')}L${sx(b).toFixed(1)} ${cfg.base}Z`;
+    };
+    function update() {
+      const d = Number($<HTMLInputElement>('[data-d]').value);
+      const n = Number($<HTMLInputElement>('[data-n]').value);
+      $('[data-dout]').textContent = dec(d.toFixed(2));
+      $('[data-nout]').textContent = String(n);
+      const zc = ZC[alpha], lam = d * Math.sqrt(n);
+      const beta = Phi(zc - lam);
+      $('[data-va]').textContent = dec(Number(alpha).toFixed(2));
+      $('[data-vb]').textContent = dec(beta.toFixed(3));
+      $('[data-vp]').textContent = dec((1 - beta).toFixed(3));
+      $('[data-note]').textContent = cfg.noteTpl.replace('§1', dec(zc.toFixed(3))).replace('§2', dec(lam.toFixed(2)));
+      const lo = cfg.lo, hi = cfg.hi, c = Math.min(hi, Math.max(lo, zc));
+      $('[data-h0]').setAttribute('d', line(curve(0, lo, hi)));
+      $('[data-h1]').setAttribute('d', line(curve(lam, lo, hi)));
+      $('[data-aa]').setAttribute('d', area(0, c, hi));
+      $('[data-ab]').setAttribute('d', area(lam, lo, c));
+      $('[data-ap]').setAttribute('d', area(lam, c, hi));
+      const crit = $('[data-crit]');
+      crit.setAttribute('x1', String(sx(c))); crit.setAttribute('x2', String(sx(c)));
+      $('[data-crit-label]').setAttribute('x', String(sx(c)));
+      $('[data-h0-label]').setAttribute('x', String(sx(0)));
+      const h1 = $('[data-h1-label]');
+      h1.setAttribute('x', String(sx(Math.min(hi - 0.3, lam))));
+      h1.setAttribute('visibility', Math.abs(lam) < 0.6 ? 'hidden' : 'visible');
+    }
+    root.querySelectorAll('input[type=range]').forEach((i) => i.addEventListener('input', update));
+    const btns = [...root.querySelectorAll<HTMLButtonElement>('[data-alpha]')];
+    btns.forEach((b) => b.addEventListener('click', () => {
+      btns.forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      alpha = b.dataset.alpha!;
+      update();
+    }));
+    update();
+  });
+</script>

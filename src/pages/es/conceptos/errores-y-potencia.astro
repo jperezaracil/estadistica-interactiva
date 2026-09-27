@@ -1,0 +1,130 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import PowerExplorer from '../../../components/PowerExplorer.astro';
+import FDRCalculator from '../../../components/FDRCalculator.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+
+const toc = [
+  { id: 'idea', label: 'La idea' },
+  { id: 'depende', label: 'De qué depende la potencia' },
+  { id: 'pruebalo', label: 'Pruébalo' },
+  { id: 'tamano', label: 'Cuántos datos hacen falta' },
+  { id: 'falsos-positivos', label: 'Potencia y falsos positivos' },
+  { id: 'errores', label: 'Errores frecuentes' },
+  { id: 'deep-learning', label: 'En aprendizaje profundo' },
+  { id: 'repaso', label: 'Autoevaluación' },
+  { id: 'profundizar', label: 'Para profundizar' },
+];
+
+const questions = [
+  {
+    prompt: 'Con n fijo, bajas α de 0,05 a 0,01. ¿Qué le pasa a la potencia?',
+    options: [
+      { text: 'Sube.' },
+      { text: 'Baja.', correct: true },
+      { text: 'No cambia.' },
+    ],
+    explain: 'Exigir más evidencia desplaza el valor crítico: rechazas menos, también cuando hay efecto. Con d = 0,5 y n = 25, la potencia pasa de 0,80 a 0,57.',
+  },
+  {
+    prompt: 'Un estudio con potencia del 20 % obtiene p = 0,03. ¿Por qué conviene ser cauto?',
+    options: [
+      { text: 'Porque el p-valor es demasiado alto para ser significativo.' },
+      { text: 'Porque con poca potencia una parte grande de los resultados significativos son falsos o exageran el efecto.', correct: true },
+      { text: 'Porque la potencia debería ser siempre del 100 %.' },
+    ],
+    explain: 'Si solo el 10 % de las hipótesis contrastadas tienen efecto real y α = 0,05, una potencia del 20 % hace que el 69 % de los resultados significativos sean falsos.',
+  },
+  {
+    prompt: 'Quieres detectar un efecto d = 0,5 con α = 0,05 bilateral y potencia 0,80. ¿Cuántas observaciones necesitas aproximadamente?',
+    options: [
+      { text: '8' },
+      { text: '32', correct: true },
+      { text: '126' },
+    ],
+    explain: 'n = ((1,96 + 0,84)/0,5)² ≈ 31,4, que se redondea a 32. Con d = 1 bastarían 8, y con d = 0,25 harían falta 126.',
+  },
+];
+---
+<ConceptLayout id="errors-power" lang="es" toc={toc}>
+  <Fragment slot="lede">Un contraste puede equivocarse de dos maneras: ver un efecto que no existe o no ver uno que sí existe. La potencia es la probabilidad de detectar un efecto real, y depende sobre todo de cuántos datos tienes.</Fragment>
+
+  <h2 id="idea">La idea</h2>
+  <p>Al final de un contraste decides si rechazas H₀ o no, sin saber si H₀ es cierta. Hay cuatro combinaciones posibles:</p>
+  <div class="table-wrap">
+    <table class="data-table decision-table">
+      <thead><tr><th></th><th>H₀ es cierta</th><th>H₀ es falsa (hay efecto)</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">Rechazas H₀</th>
+          <td class="bad-cell"><strong>Error de tipo I</strong><span>Falso positivo. Probabilidad α.</span></td>
+          <td class="good-cell"><strong>Acierto</strong><span>Probabilidad 1 − β: la potencia.</span></td>
+        </tr>
+        <tr>
+          <th scope="row">No rechazas H₀</th>
+          <td class="good-cell"><strong>Acierto</strong><span>Probabilidad 1 − α.</span></td>
+          <td class="bad-cell"><strong>Error de tipo II</strong><span>Falso negativo. Probabilidad β.</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <Callout label="Idea clave">
+    <p>α lo fijas tú antes de mirar los datos. β no: depende del tamaño real del efecto, de la variabilidad y de cuántos datos tengas.</p>
+  </Callout>
+
+  <h2 id="depende">De qué depende la potencia</h2>
+  <p>Para un contraste z unilateral sobre una media, con un efecto de tamaño <Tex expr={String.raw`d = \delta/\sigma`} /> (la diferencia real medida en desviaciones típicas) y <Tex expr={String.raw`n`} /> observaciones:</p>
+  <Tex display expr={String.raw`\text{potencia} = 1 - \beta = 1 - \Phi\!\left(z_{1-\alpha} - d\sqrt{n}\right)`} />
+  <p>El término <Tex expr={String.raw`d\sqrt{n}`} /> es cuánto se desplaza el estadístico cuando hay efecto. La potencia crece cuando:</p>
+  <ul>
+    <li>el efecto es mayor;</li>
+    <li>hay más datos, aunque solo con la raíz cuadrada de n;</li>
+    <li>α es mayor: exigir menos evidencia detecta más efectos, a costa de más falsos positivos.</li>
+  </ul>
+  <p>Por ejemplo, con d = 0,5, n = 25 y α = 0,05, la potencia es 0,80. Con α = 0,01 baja a 0,57, y con n = 10 a 0,47.</p>
+
+  <h2 id="pruebalo">Pruébalo</h2>
+  <p>Las dos curvas son la distribución del estadístico si H₀ es cierta y si hay un efecto. Mueve el efecto y el tamaño de la muestra, y observa cómo se reparten α, β y la potencia a cada lado del valor crítico.</p>
+  <PowerExplorer lang="es" />
+
+  <h2 id="tamano">Cuántos datos hacen falta</h2>
+  <p>Despejando n se obtiene el tamaño de muestra necesario para una potencia dada. Para un contraste bilateral:</p>
+  <Tex display expr={String.raw`n = \left(\frac{z_{1-\alpha/2} + z_{1-\beta}}{d}\right)^{2}`} />
+  <p>Con α = 0,05 y potencia 0,80 (valores críticos 1,96 y 0,84), un efecto grande, d = 1, necesita 8 observaciones; uno mediano, d = 0,5, necesita 32; y uno pequeño, d = 0,25, necesita 126. Reducir el efecto a la mitad multiplica por cuatro los datos necesarios.</p>
+
+  <h2 id="falsos-positivos">Potencia y falsos positivos</h2>
+  <p>La potencia también decide cuánto te puedes fiar de un resultado significativo. Si solo una fracción π de las hipótesis que contrastas corresponde a efectos reales, la proporción de resultados significativos que son falsos es:</p>
+  <Tex display expr={String.raw`\frac{\alpha\,(1-\pi)}{\alpha\,(1-\pi) + (1-\beta)\,\pi}`} />
+  <p>Con π = 10 % y α = 0,05, es el 36 % si la potencia es del 80 %, y el 69 % si es del 20 %. Además, cuando la potencia es baja, los efectos que sí salen significativos suelen estar sobreestimados: solo superan el umbral las estimaciones que por azar salieron grandes.</p>
+  <FDRCalculator lang="es" />
+
+  <h2 id="errores">Errores frecuentes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">«Si no rechazo H₀ y la potencia era del 80 %, solo hay un 20 % de probabilidad de que me equivoque.»</span><span class="fix">La potencia se calcula para un efecto concreto supuesto. No es la probabilidad de que tu decisión sea correcta, que depende también de cuántos efectos reales hay entre los que contrastas.</span></li>
+    <li><span class="claim">«Calcular la potencia después del estudio, con el efecto observado, dice algo nuevo.»</span><span class="fix">Esa «potencia observada» es una función directa del p-valor: un p-valor alto implica siempre una potencia observada baja. No añade información.</span></li>
+    <li><span class="claim">«Un resultado significativo con una muestra pequeña es más convincente, porque ha superado un listón difícil.»</span><span class="fix">Es al revés: con poca potencia, una parte mayor de los resultados significativos son falsos positivos o exageran el efecto.</span></li>
+    <li><span class="claim">«Bajar α siempre es más seguro.»</span><span class="fix">Con n fijo, bajar α reduce los falsos positivos pero aumenta los falsos negativos. El equilibrio depende de qué error sea más caro.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">En aprendizaje profundo</h2>
+  <ul>
+    <li><strong>Pocas semillas, poca potencia.</strong> Comparar dos arquitecturas con tres semillas cada una tiene muy poca potencia para diferencias pequeñas. Que no salga significativo no demuestra que sean equivalentes.</li>
+    <li><strong>Tamaño del conjunto de test.</strong> Para detectar con potencia 0,80 una mejora de 0,90 a 0,91 de accuracy comparando proporciones independientes, harían falta unos 13 500 ejemplos por grupo. Evaluar los dos modelos sobre el mismo test suele necesitar menos, porque la comparación emparejada se centra en los ejemplos en que discrepan.</li>
+    <li><strong>Elegir con el test.</strong> Probar muchas variantes y quedarse con la que mejor sale en test infla los falsos positivos. Elige con validación y usa el test una sola vez.</li>
+  </ul>
+
+  <h2 id="repaso">Autoevaluación</h2>
+  <Quiz lang="es" questions={questions} />
+
+  <h2 id="profundizar">Para profundizar</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.es} <span class="where">§5.1.5 (tipos de error y potencia) y §5.1.6 (contrastes unilaterales y bilaterales).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.es}</a> <span class="where">§5.5.2 (errores de tipo I y II y lema de Neyman-Pearson).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.es}</a> <span class="where">§3.10 (contraste de hipótesis).</span></li>
+    <li><a href="https://doi.org/10.1198/000313001300339897">Hoenig, J. M. y Heisey, D. M. (2001). The Abuse of Power: The Pervasive Fallacy of Power Calculations for Data Analysis. The American Statistician, 55(1), 19–24.</a></li>
+    <li><a href="https://doi.org/10.1038/nrn3475">Button, K. S. et al. (2013). Power failure: why small sample size undermines the reliability of neuroscience. Nature Reviews Neuroscience, 14(5), 365–376.</a></li>
+  </ul>
+</ConceptLayout>

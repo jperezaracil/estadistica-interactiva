@@ -1,0 +1,128 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import PValueExplorer from '../../../components/PValueExplorer.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+
+const toc = [
+  { id: 'idea', label: 'La idea' },
+  { id: 'ingredientes', label: 'Los ingredientes' },
+  { id: 'p-valor', label: 'El p-valor' },
+  { id: 'pruebalo', label: 'Pruébalo' },
+  { id: 'cola', label: 'Por qué se suma la cola' },
+  { id: 'frontera', label: 'La frontera, en números' },
+  { id: 'errores', label: 'Errores frecuentes' },
+  { id: 'deep-learning', label: 'En aprendizaje profundo' },
+  { id: 'repaso', label: 'Autoevaluación' },
+  { id: 'profundizar', label: 'Para profundizar' },
+];
+
+const questions = [
+  {
+    prompt: 'Con 20 lanzamientos salen 15 caras y el p-valor bilateral es 0,041. Con α = 0,05, ¿qué concluyes?',
+    options: [
+      { text: 'Rechazo H₀: los datos son poco compatibles con una moneda justa.', correct: true },
+      { text: 'Hay un 4,1 % de probabilidad de que la moneda sea justa.' },
+      { text: 'La moneda está trucada con una probabilidad del 95,9 %.' },
+    ],
+    explain: 'Como 0,041 ≤ 0,05, se rechaza H₀. Las otras dos opciones leen el p-valor como la probabilidad de una hipótesis, que es justo lo que no mide.',
+  },
+  {
+    prompt: 'Un contraste da p = 0,30. ¿Qué afirmación es correcta?',
+    options: [
+      { text: 'Queda demostrado que no hay efecto.' },
+      { text: 'Los datos son compatibles con H₀, pero eso no descarta un efecto: puede faltar potencia.', correct: true },
+      { text: 'Hay un 30 % de probabilidad de que H₀ sea cierta.' },
+    ],
+    explain: 'No rechazar no es demostrar. Mira el intervalo de confianza: si es ancho, los datos son compatibles tanto con «no hay efecto» como con efectos importantes.',
+  },
+  {
+    prompt: 'Comparas 40 configuraciones de hiperparámetros con un modelo base, cada una con α = 0,05, y en realidad ninguna es mejor. ¿Qué es lo más probable?',
+    options: [
+      { text: 'Ninguna saldrá significativa.' },
+      { text: 'Alguna saldrá significativa por azar.', correct: true },
+      { text: 'Saldrán exactamente dos significativas.' },
+    ],
+    explain: 'Si los contrastes fueran independientes, la probabilidad de al menos un falso positivo sería 1 − 0,95⁴⁰ ≈ 0,87. De media se esperan dos, pero puede salir cualquier número.',
+  },
+];
+---
+<ConceptLayout id="hypothesis-testing" lang="es" toc={toc}>
+  <Fragment slot="lede">Un contraste mide cómo de compatibles son unos datos con una hipótesis. El p-valor resume esa compatibilidad en un número, y es también la cifra más malinterpretada de la estadística.</Fragment>
+
+  <h2 id="idea">La idea</h2>
+  <p>Lanzas una moneda 20 veces y salen 16 caras. ¿Está trucada? Un contraste no responde directamente a esa pregunta, sino a otra más modesta: si la moneda fuera justa, ¿sería raro ver algo así? Si lo es, tienes motivos para dudar de que sea justa.</p>
+  <Callout label="Idea clave">
+    <p>El p-valor responde a «si H₀ fuera cierta, ¿con qué frecuencia vería datos al menos tan extremos como los míos?». No responde a «¿qué probabilidad hay de que H₀ sea cierta?».</p>
+  </Callout>
+
+  <h2 id="ingredientes">Los ingredientes</h2>
+  <dl class="defs">
+    <div><dt>Hipótesis nula (H₀)</dt><dd>La afirmación que se pone a prueba, casi siempre «no hay efecto». Aquí, que la moneda es justa: <Tex expr={String.raw`p = 0{,}5`} />.</dd></div>
+    <div><dt>Hipótesis alternativa (H₁)</dt><dd>Lo que se contempla si H₀ falla. Aquí, <Tex expr={String.raw`p \neq 0{,}5`} />: un sesgo hacia cualquiera de los dos lados.</dd></div>
+    <div><dt>Estadístico</dt><dd>El resumen de los datos que se compara con lo esperado. Aquí, el número de caras <Tex expr={String.raw`X`} />, que bajo H₀ sigue una binomial <Tex expr={String.raw`\mathrm{B}(20;\ 0{,}5)`} />.</dd></div>
+    <div><dt>Nivel de significación α</dt><dd>El umbral que se fija antes de ver los datos. Es la tasa de falsos positivos que aceptas cuando H₀ es cierta; el habitual 0,05 es solo una convención.</dd></div>
+  </dl>
+  <p>Un matiz que se suele olvidar: el cálculo no supone solo H₀, sino todo el modelo, como que los lanzamientos son independientes o que el análisis no se eligió después de ver los datos. Un resultado raro indica que algo de ese conjunto no encaja, no necesariamente H₀.</p>
+
+  <h2 id="p-valor">El p-valor</h2>
+  <p>Es la probabilidad, suponiendo que H₀ es cierta, de obtener un resultado al menos tan extremo como el observado:</p>
+  <Tex display expr={String.raw`p = P\big(\text{resultado al menos tan extremo como el observado} \mid H_0\big)`} />
+  <p>«Al menos tan extremo» significa sumar la probabilidad del resultado observado y la de todos los que se alejan todavía más de lo esperado: se suma la <em>cola</em> de la distribución. Como H₁ admite sesgo hacia los dos lados, sacar 4 caras sería igual de extremo que sacar 16, así que en un contraste bilateral se suman las dos colas:</p>
+  <Tex display expr={String.raw`p = P(X \ge 16) + P(X \le 4) = 0{,}0059 + 0{,}0059 \approx 0{,}012`} />
+  <p>La decisión compara ese número con el α fijado de antemano:</p>
+  <Tex display expr={String.raw`p \le \alpha \;\Rightarrow\; \text{se rechaza } H_0 \qquad\qquad p > \alpha \;\Rightarrow\; \text{no se rechaza } H_0`} />
+  <p>Con α = 0,05 se rechaza H₀, porque 0,012 ≤ 0,05. Con α = 0,01, no. Y no rechazar no significa aceptar: significa que los datos no bastan para descartarla.</p>
+
+  <h2 id="pruebalo">Pruébalo</h2>
+  <p>Mueve el número de caras y observa cómo cambian las colas y el p-valor. Busca a partir de cuántas caras se rechaza H₀ con cada α, y compara el contraste bilateral con el unilateral.</p>
+  <PValueExplorer lang="es" initial={16} />
+
+  <h2 id="cola">Por qué se suma la cola</h2>
+  <p>La probabilidad de un resultado exacto no sirve para medir la sorpresa: cuando hay muchos resultados posibles, todos son poco probables por separado, incluso el más típico. En 1000 lanzamientos de una moneda justa, sacar exactamente 500 caras tiene probabilidad 0,025. Si decidieras con la probabilidad exacta y un umbral de 0,05, rechazarías que la moneda es justa saliera lo que saliera.</p>
+  <p>Lo que indica sorpresa es la distancia a lo esperado, y eso es lo que mide la cola: con 500 caras, todos los resultados son al menos igual de extremos y el p-valor es 1. Además, sumar la cola es lo que hace que α funcione: si rechazas H₀ cuando p ≤ 0,05 y H₀ es cierta, te equivocarás como mucho en el 5 % de los experimentos.</p>
+
+  <h2 id="frontera">La frontera, en números</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Caras</th><th class="n">p-valor</th><th class="n">IC 95 % para p</th><th>¿Se rechaza H₀ con α = 0,05?</th></tr></thead>
+      <tbody>
+        <tr><td>13</td><td class="n">0,263</td><td class="n">[0,41; 0,85]</td><td class="no">No</td></tr>
+        <tr><td>14</td><td class="n">0,115</td><td class="n">[0,46; 0,88]</td><td class="no">No</td></tr>
+        <tr><td>15</td><td class="n">0,041</td><td class="n">[0,51; 0,91]</td><td class="yes">Sí</td></tr>
+        <tr><td>16</td><td class="n">0,012</td><td class="n">[0,56; 0,94]</td><td class="yes">Sí</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>El intervalo de confianza (aquí, el exacto de Clopper-Pearson) incluye 0,5 justo en los casos en que el contraste no rechaza. No es casualidad: un IC al 95 % reúne los valores del parámetro que un contraste bilateral con α = 0,05 no rechazaría, cuando ambos se construyen con el mismo método. Y aporta lo que el p-valor no da: con 14 caras, la moneda podría ser justa o estar bastante sesgada.</p>
+
+  <h2 id="errores">Errores frecuentes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">«p = 0,012 es la probabilidad de que H₀ sea cierta.»</span><span class="fix">El p-valor se calcula suponiendo que H₀ es cierta, así que no puede medir su probabilidad.</span></li>
+    <li><span class="claim">«1 − p = 0,988 es la probabilidad de que la moneda esté trucada.»</span><span class="fix">Por la misma razón, tampoco.</span></li>
+    <li><span class="claim">«Si rechazo con α = 0,05, me equivoco el 5 % de las veces.»</span><span class="fix">El 5 % es la tasa de falsos positivos cuando H₀ es cierta. La parte de resultados significativos que son falsos depende de la potencia y de cuántos efectos reales hay entre los que contrastas: si solo lo es el 10 % y la potencia es del 80 %, el 36 % de los «significativos» son falsos.</span></li>
+    <li><span class="claim">«p &gt; 0,05 demuestra que no hay efecto.»</span><span class="fix">Puede que falte potencia. Con 14 caras de 20 no se rechaza H₀, pero el intervalo va de 0,46 a 0,88.</span></li>
+    <li><span class="claim">«Significativo quiere decir importante.»</span><span class="fix">Con muchos datos, efectos minúsculos dan p-valores minúsculos. Informa siempre del tamaño del efecto y de su intervalo.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">En aprendizaje profundo</h2>
+  <ul>
+    <li><strong>Comparar dos modelos.</strong> Si A y B se evalúan sobre el mismo conjunto de test, los resultados están emparejados. Un test de McNemar sobre los ejemplos en que discrepan, o un bootstrap emparejado sobre la diferencia de métricas, es más adecuado que comparar dos intervalos por separado.</li>
+    <li><strong>Semillas y búsqueda de hiperparámetros.</strong> Probar muchas configuraciones y quedarse con la mejor es hacer comparaciones múltiples: parte de la mejora puede ser ruido. Informa de la variabilidad entre semillas y reserva un conjunto de test que no se use para elegir.</li>
+    <li><strong>Conjuntos de test enormes.</strong> Con cientos de miles de ejemplos, diferencias de décimas de punto pueden salir significativas sin importar en la práctica. Manda el tamaño del efecto.</li>
+  </ul>
+
+  <h2 id="repaso">Autoevaluación</h2>
+  <Quiz lang="es" questions={questions} />
+
+  <h2 id="profundizar">Para profundizar</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.es} <span class="where">§5.1.3–5.1.7 (elementos del contraste, p-valores, potencia, intervalos por inversión de contrastes), §5.2 (tests paramétricos) y §5.4 (multiplicidad).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.es}</a> <span class="where">§5.5.3–5.5.4 (NHST y p-valores) y §4.7.4–4.7.5 (intervalos de confianza).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.es}</a> <span class="where">§3.10 (contraste de hipótesis).</span></li>
+    <li><a href="https://doi.org/10.1080/00031305.2016.1154108">Wasserstein, R. L. y Lazar, N. A. (2016). The ASA Statement on p-Values: Context, Process, and Purpose. The American Statistician, 70(2), 129–133.</a></li>
+    <li><a href="https://doi.org/10.1007/s10654-016-0149-3">Greenland, S. et al. (2016). Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations. European Journal of Epidemiology, 31(4), 337–350.</a></li>
+  </ul>
+</ConceptLayout>

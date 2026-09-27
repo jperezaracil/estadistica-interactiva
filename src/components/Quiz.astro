@@ -1,0 +1,64 @@
+---
+import type { Lang } from '../data/areas';
+
+export interface QuizQuestion {
+  prompt: string;
+  options: { text: string; correct?: boolean }[];
+  explain: string;
+}
+interface Props {
+  lang: Lang;
+  questions: QuizQuestion[];
+}
+const { lang, questions } = Astro.props;
+const L = lang === 'es'
+  ? { right: 'Correcto.', wrong: 'No exactamente.', retry: 'Volver a intentarlo' }
+  : { right: 'Correct.', wrong: 'Not quite.', retry: 'Try again' };
+---
+<div class="quiz" data-quiz data-right={L.right} data-wrong={L.wrong}>
+  {questions.map((q, i) => (
+    <div class="quiz-q" data-q role="group" aria-labelledby={`quiz-${lang}-${i}`}>
+      <p class="quiz-prompt" id={`quiz-${lang}-${i}`}>{i + 1}. {q.prompt}</p>
+      <div class="quiz-options">
+        {q.options.map((o) => (
+          <button type="button" class="quiz-option" data-correct={o.correct ? '1' : '0'}>
+            <span class="mark" aria-hidden="true"></span>
+            <span>{o.text}</span>
+          </button>
+        ))}
+      </div>
+      <p class="quiz-feedback" data-feedback hidden aria-live="polite"><strong data-verdict></strong> {q.explain}</p>
+      <button type="button" class="quiz-retry" data-retry hidden>{L.retry}</button>
+    </div>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-quiz]').forEach((quiz) => {
+    const right = quiz.dataset.right!, wrong = quiz.dataset.wrong!;
+    quiz.querySelectorAll<HTMLElement>('[data-q]').forEach((q) => {
+      const opts = [...q.querySelectorAll<HTMLButtonElement>('.quiz-option')];
+      const fb = q.querySelector<HTMLElement>('[data-feedback]')!;
+      const verdict = q.querySelector<HTMLElement>('[data-verdict]')!;
+      const retry = q.querySelector<HTMLButtonElement>('[data-retry]')!;
+      opts.forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const ok = btn.dataset.correct === '1';
+          opts.forEach((o) => {
+            o.disabled = true;
+            if (o.dataset.correct === '1') { o.classList.add('correct'); o.querySelector('.mark')!.textContent = '✓'; }
+          });
+          if (!ok) { btn.classList.add('wrong'); btn.querySelector('.mark')!.textContent = '✕'; }
+          verdict.textContent = ok ? right : wrong;
+          fb.hidden = false;
+          retry.hidden = ok;
+        }),
+      );
+      retry.addEventListener('click', () => {
+        opts.forEach((o) => { o.disabled = false; o.classList.remove('correct', 'wrong'); o.querySelector('.mark')!.textContent = ''; });
+        fb.hidden = true;
+        retry.hidden = true;
+      });
+    });
+  });
+</script>

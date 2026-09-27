@@ -1,0 +1,128 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import PValueExplorer from '../../../components/PValueExplorer.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+
+const toc = [
+  { id: 'idea', label: 'The idea' },
+  { id: 'ingredients', label: 'The ingredients' },
+  { id: 'p-value', label: 'The p-value' },
+  { id: 'try-it', label: 'Try it' },
+  { id: 'tail', label: 'Why we add up the tail' },
+  { id: 'boundary', label: 'The boundary, in numbers' },
+  { id: 'pitfalls', label: 'Common mistakes' },
+  { id: 'deep-learning', label: 'In deep learning' },
+  { id: 'review', label: 'Self-check' },
+  { id: 'further', label: 'Further reading' },
+];
+
+const questions = [
+  {
+    prompt: 'In 20 tosses you get 15 heads and the two-sided p-value is 0.041. At α = 0.05, what do you conclude?',
+    options: [
+      { text: 'Reject H₀: the data are hardly compatible with a fair coin.', correct: true },
+      { text: 'There is a 4.1% probability that the coin is fair.' },
+      { text: 'The coin is biased with probability 95.9%.' },
+    ],
+    explain: 'Since 0.041 ≤ 0.05, H₀ is rejected. The other two options read the p-value as the probability of a hypothesis, which is exactly what it does not measure.',
+  },
+  {
+    prompt: 'A test gives p = 0.30. Which statement is correct?',
+    options: [
+      { text: 'It proves there is no effect.' },
+      { text: 'The data are compatible with H₀, but that does not rule out an effect: power may be lacking.', correct: true },
+      { text: 'There is a 30% probability that H₀ is true.' },
+    ],
+    explain: 'Not rejecting is not proving. Look at the confidence interval: if it is wide, the data are compatible both with “no effect” and with sizeable effects.',
+  },
+  {
+    prompt: 'You compare 40 hyperparameter configurations against a baseline, each at α = 0.05, and in fact none is better. What is most likely?',
+    options: [
+      { text: 'None will come out significant.' },
+      { text: 'Some will come out significant by chance.', correct: true },
+      { text: 'Exactly two will come out significant.' },
+    ],
+    explain: 'If the tests were independent, the probability of at least one false positive would be 1 − 0.95⁴⁰ ≈ 0.87. Two are expected on average, but any number can occur.',
+  },
+];
+---
+<ConceptLayout id="hypothesis-testing" lang="en" toc={toc}>
+  <Fragment slot="lede">A test measures how compatible some data are with a hypothesis. The p-value sums up that compatibility in a single number, and it is also the most misread number in statistics.</Fragment>
+
+  <h2 id="idea">The idea</h2>
+  <p>You toss a coin 20 times and get 16 heads. Is it biased? A test does not answer that question directly, but a more modest one: if the coin were fair, would it be unusual to see something like this? If it would, you have reason to doubt that it is fair.</p>
+  <Callout label="Key idea">
+    <p>The p-value answers “if H₀ were true, how often would I see data at least as extreme as mine?”. It does not answer “what is the probability that H₀ is true?”.</p>
+  </Callout>
+
+  <h2 id="ingredients">The ingredients</h2>
+  <dl class="defs">
+    <div><dt>Null hypothesis (H₀)</dt><dd>The claim being tested, almost always “no effect”. Here, that the coin is fair: <Tex expr={String.raw`p = 0.5`} />.</dd></div>
+    <div><dt>Alternative hypothesis (H₁)</dt><dd>What is considered if H₀ fails. Here, <Tex expr={String.raw`p \neq 0.5`} />: a bias in either direction.</dd></div>
+    <div><dt>Test statistic</dt><dd>The summary of the data compared with what is expected. Here, the number of heads <Tex expr={String.raw`X`} />, which under H₀ follows a binomial <Tex expr={String.raw`\mathrm{B}(20,\ 0.5)`} />.</dd></div>
+    <div><dt>Significance level α</dt><dd>The threshold fixed before looking at the data. It is the false-positive rate you accept when H₀ is true; the usual 0.05 is just a convention.</dd></div>
+  </dl>
+  <p>A point that is often forgotten: the calculation assumes not only H₀ but the whole model, such as independent tosses or an analysis that was not chosen after seeing the data. An unusual result says that something in that package does not fit, not necessarily H₀.</p>
+
+  <h2 id="p-value">The p-value</h2>
+  <p>It is the probability, assuming H₀ is true, of getting a result at least as extreme as the one observed:</p>
+  <Tex display expr={String.raw`p = P\big(\text{result at least as extreme as the observed one} \mid H_0\big)`} />
+  <p>“At least as extreme” means adding the probability of the observed result and of every result even further from what is expected: we add up the <em>tail</em> of the distribution. Since H₁ allows a bias in either direction, 4 heads would be just as extreme as 16, so a two-sided test adds both tails:</p>
+  <Tex display expr={String.raw`p = P(X \ge 16) + P(X \le 4) = 0.0059 + 0.0059 \approx 0.012`} />
+  <p>The decision compares that number with the α fixed beforehand:</p>
+  <Tex display expr={String.raw`p \le \alpha \;\Rightarrow\; \text{reject } H_0 \qquad\qquad p > \alpha \;\Rightarrow\; \text{do not reject } H_0`} />
+  <p>At α = 0.05, H₀ is rejected because 0.012 ≤ 0.05. At α = 0.01, it is not. And not rejecting does not mean accepting: it means the data are not enough to rule it out.</p>
+
+  <h2 id="try-it">Try it</h2>
+  <p>Move the number of heads and watch how the tails and the p-value change. Find from how many heads H₀ is rejected at each α, and compare the two-sided test with the one-sided one.</p>
+  <PValueExplorer lang="en" initial={16} />
+
+  <h2 id="tail">Why we add up the tail</h2>
+  <p>The probability of an exact result is no measure of surprise: when there are many possible results, each one is unlikely on its own, even the most typical. In 1000 tosses of a fair coin, getting exactly 500 heads has probability 0.025. If you decided on the exact probability with a 0.05 threshold, you would reject a fair coin whatever came up.</p>
+  <p>What signals surprise is the distance from what is expected, and that is what the tail measures: with 500 heads, every result is at least as extreme and the p-value is 1. Adding up the tail is also what makes α work: if you reject H₀ whenever p ≤ 0.05 and H₀ is true, you will be wrong in at most 5% of experiments.</p>
+
+  <h2 id="boundary">The boundary, in numbers</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Heads</th><th class="n">p-value</th><th class="n">95% CI for p</th><th>Reject H₀ at α = 0.05?</th></tr></thead>
+      <tbody>
+        <tr><td>13</td><td class="n">0.263</td><td class="n">[0.41, 0.85]</td><td class="no">No</td></tr>
+        <tr><td>14</td><td class="n">0.115</td><td class="n">[0.46, 0.88]</td><td class="no">No</td></tr>
+        <tr><td>15</td><td class="n">0.041</td><td class="n">[0.51, 0.91]</td><td class="yes">Yes</td></tr>
+        <tr><td>16</td><td class="n">0.012</td><td class="n">[0.56, 0.94]</td><td class="yes">Yes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The confidence interval (here, the exact Clopper–Pearson interval) contains 0.5 exactly in the cases where the test does not reject. That is no coincidence: a 95% CI gathers the parameter values that a two-sided test at α = 0.05 would not reject, when both are built with the same method. And it adds what the p-value does not give: with 14 heads, the coin could be fair or quite biased.</p>
+
+  <h2 id="pitfalls">Common mistakes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">“p = 0.012 is the probability that H₀ is true.”</span><span class="fix">The p-value is computed assuming H₀ is true, so it cannot measure its probability.</span></li>
+    <li><span class="claim">“1 − p = 0.988 is the probability that the coin is biased.”</span><span class="fix">For the same reason, it is not.</span></li>
+    <li><span class="claim">“If I reject at α = 0.05, I am wrong 5% of the time.”</span><span class="fix">The 5% is the false-positive rate when H₀ is true. The share of significant results that are false depends on power and on how many real effects there are among those you test: if only 10% are real and power is 80%, 36% of the “significant” results are false.</span></li>
+    <li><span class="claim">“p &gt; 0.05 proves there is no effect.”</span><span class="fix">Power may be lacking. With 14 heads out of 20, H₀ is not rejected, yet the interval runs from 0.46 to 0.88.</span></li>
+    <li><span class="claim">“Significant means important.”</span><span class="fix">With enough data, tiny effects give tiny p-values. Always report the effect size and its interval.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">In deep learning</h2>
+  <ul>
+    <li><strong>Comparing two models.</strong> If A and B are evaluated on the same test set, their results are paired. A McNemar test on the examples where they disagree, or a paired bootstrap on the difference in metrics, is more appropriate than comparing two separate intervals.</li>
+    <li><strong>Seeds and hyperparameter search.</strong> Trying many configurations and keeping the best one is multiple testing: part of the improvement may be noise. Report the variability across seeds and keep a test set that is never used for selection.</li>
+    <li><strong>Huge test sets.</strong> With hundreds of thousands of examples, differences of a few tenths of a point can be significant without mattering in practice. Effect size is what counts.</li>
+  </ul>
+
+  <h2 id="review">Self-check</h2>
+  <Quiz lang="en" questions={questions} />
+
+  <h2 id="further">Further reading</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.en} <span class="where">§5.1.3–5.1.7 (elements of a test, p-values, power, confidence intervals by inverting tests), §5.2 (parametric tests) and §5.4 (multiplicity).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.en}</a> <span class="where">§5.5.3–5.5.4 (NHST and p-values) and §4.7.4–4.7.5 (confidence intervals).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.en}</a> <span class="where">§3.10 (hypothesis testing).</span></li>
+    <li><a href="https://doi.org/10.1080/00031305.2016.1154108">Wasserstein, R. L. and Lazar, N. A. (2016). The ASA Statement on p-Values: Context, Process, and Purpose. The American Statistician, 70(2), 129–133.</a></li>
+    <li><a href="https://doi.org/10.1007/s10654-016-0149-3">Greenland, S. et al. (2016). Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations. European Journal of Epidemiology, 31(4), 337–350.</a></li>
+  </ul>
+</ConceptLayout>

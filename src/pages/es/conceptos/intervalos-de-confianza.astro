@@ -1,0 +1,113 @@
+---
+import ConceptLayout from '../../../components/ConceptLayout.astro';
+import Tex from '../../../components/Tex.astro';
+import Callout from '../../../components/Callout.astro';
+import CICoverage from '../../../components/CICoverage.astro';
+import Quiz from '../../../components/Quiz.astro';
+import { books } from '../../../data/books';
+import { conceptById } from '../../../data/concepts';
+import { conceptUrl } from '../../../lib/paths';
+
+const pvalue = conceptUrl(conceptById['hypothesis-testing'], 'es');
+
+const toc = [
+  { id: 'idea', label: 'La idea' },
+  { id: 'construccion', label: 'Cómo se construye' },
+  { id: 'pruebalo', label: 'Pruébalo' },
+  { id: 'significado', label: 'Qué significa el 95 %' },
+  { id: 'contrastes', label: 'Relación con los contrastes' },
+  { id: 'ejemplo', label: 'Un ejemplo con un modelo' },
+  { id: 'errores', label: 'Errores frecuentes' },
+  { id: 'deep-learning', label: 'En aprendizaje profundo' },
+  { id: 'repaso', label: 'Autoevaluación' },
+  { id: 'profundizar', label: 'Para profundizar' },
+];
+
+const questions = [
+  {
+    prompt: 'Calculas un IC al 95 % para una media y obtienes [4,1; 5,3]. ¿Qué afirmación es correcta?',
+    options: [
+      { text: 'Hay un 95 % de probabilidad de que la media real esté entre 4,1 y 5,3.' },
+      { text: 'El método que has usado captura la media real en el 95 % de las muestras posibles.', correct: true },
+      { text: 'El 95 % de los datos está entre 4,1 y 5,3.' },
+    ],
+    explain: 'El 95 % describe el procedimiento. La primera opción es la lectura bayesiana y la tercera confunde el intervalo de la media con la dispersión de los datos.',
+  },
+  {
+    prompt: 'Si multiplicas por cuatro el tamaño de la muestra, ¿qué pasa con la anchura del intervalo?',
+    options: [
+      { text: 'Se reduce a la mitad.', correct: true },
+      { text: 'Se reduce a la cuarta parte.' },
+      { text: 'No cambia.' },
+    ],
+    explain: 'La anchura es proporcional a 1/√n, y √4 = 2.',
+  },
+  {
+    prompt: 'Dos modelos obtienen 0,90 y 0,91 de accuracy en el mismo test de 1000 ejemplos, y sus IC al 95 % se solapan. ¿Qué concluyes?',
+    options: [
+      { text: 'Que la diferencia no es significativa, porque los intervalos se solapan.' },
+      { text: 'Que hay que analizar la diferencia directamente, con un test o un bootstrap emparejados.', correct: true },
+      { text: 'Que el modelo con 0,91 es mejor.' },
+    ],
+    explain: 'El solapamiento de dos intervalos no decide la significación de la diferencia. Además, los resultados están emparejados: los dos modelos se evalúan sobre los mismos ejemplos.',
+  },
+];
+---
+<ConceptLayout id="confidence-intervals" lang="es" toc={toc}>
+  <Fragment slot="lede">Un intervalo de confianza da un rango de valores compatibles con los datos. Su «95 %» describe el método con el que se construye, no el intervalo concreto que has calculado.</Fragment>
+
+  <h2 id="idea">La idea</h2>
+  <p>Cuando estimas algo con una muestra (una media, una proporción, la accuracy de un modelo), el número que obtienes no es el valor real: con otra muestra saldría otro. Un intervalo de confianza acompaña la estimación de un margen que refleja esa variabilidad de muestra a muestra.</p>
+  <Callout label="Idea clave">
+    <p>Si repitieras el estudio muchas veces y calcularas cada vez un IC al 95 %, el 95 % de esos intervalos contendría el valor real. Un intervalo concreto, una vez calculado, lo contiene o no lo contiene.</p>
+  </Callout>
+
+  <h2 id="construccion">Cómo se construye</h2>
+  <p>La receta casi siempre es la misma: estimación ± valor crítico × error estándar. Para la media de una variable con desviación típica σ conocida:</p>
+  <Tex display expr={String.raw`\bar{x} \pm z_{1-\alpha/2}\,\frac{\sigma}{\sqrt{n}}, \qquad z_{0{,}975} = 1{,}96`} />
+  <p>Si σ no se conoce, se sustituye por la desviación típica muestral <Tex expr={String.raw`s`} />, y el valor crítico de la normal por el de una t de Student con <Tex expr={String.raw`n-1`} /> grados de libertad. Dos consecuencias prácticas:</p>
+  <ul>
+    <li>Más confianza exige intervalos más anchos: al 99 % el valor crítico es 2,58 en vez de 1,96.</li>
+    <li>La anchura baja con <Tex expr={String.raw`\sqrt{n}`} />: para reducirla a la mitad hacen falta cuatro veces más datos.</li>
+  </ul>
+
+  <h2 id="pruebalo">Pruébalo</h2>
+  <p>Cada muestra produce un intervalo distinto. Genera muchas y comprueba qué fracción contiene el valor real μ = 50; después cambia el nivel de confianza y el tamaño de la muestra.</p>
+  <CICoverage lang="es" />
+  <p>Con n = 20 la semianchura al 95 % es ±4,38; con n = 80 es ±2,19. Cuatro veces más datos, la mitad de anchura.</p>
+
+  <h2 id="significado">Qué significa el 95 %</h2>
+  <p>La probabilidad del 95 % se refiere al procedimiento, antes de ver los datos. Una vez calculado, el intervalo es fijo y el parámetro también: no queda nada aleatorio de lo que hablar. La frase «hay un 95 % de probabilidad de que el parámetro esté entre a y b» corresponde a un intervalo de credibilidad bayesiano, que necesita una distribución a priori. En casos sencillos y con priors poco informativos ambos intervalos pueden coincidir numéricamente, pero responden a preguntas distintas.</p>
+
+  <h2 id="contrastes">Relación con los contrastes</h2>
+  <p>Un IC al 95 % reúne los valores del parámetro que un contraste bilateral con α = 0,05 no rechazaría, cuando ambos se construyen con el mismo método. Por eso el intervalo contiene la información del contraste y algo más: el tamaño del efecto y la precisión con que se estima. En el ejemplo de la moneda de <a href={pvalue}>contraste de hipótesis y p-valor</a>, con 16 caras de 20 el IC exacto al 95 % es [0,56; 0,94] y excluye 0,5, igual que el contraste rechaza H₀.</p>
+
+  <h2 id="ejemplo">Un ejemplo con un modelo</h2>
+  <p>Un clasificador acierta 900 de 1000 ejemplos de test: accuracy 0,90. El IC exacto al 95 % (Clopper-Pearson) va de 0,880 a 0,918. Con ese tamaño de test, las diferencias de un punto entre modelos quedan dentro de la incertidumbre de cada estimación; para compararlos hay que analizar la diferencia directamente.</p>
+
+  <h2 id="errores">Errores frecuentes</h2>
+  <ul class="pitfalls">
+    <li><span class="claim">«Hay un 95 % de probabilidad de que el valor real esté en este intervalo.»</span><span class="fix">Eso describe un intervalo de credibilidad bayesiano. En el enfoque frecuentista, el 95 % es una propiedad del método.</span></li>
+    <li><span class="claim">«El 95 % de los datos está dentro del intervalo.»</span><span class="fix">El intervalo de la media es mucho más estrecho que la dispersión de los datos: se estrecha con √n, y la dispersión de los datos no.</span></li>
+    <li><span class="claim">«El 95 % de las estimaciones futuras caerán dentro de este intervalo.»</span><span class="fix">Eso sería un intervalo de predicción, que es más ancho porque también tiene que cubrir la variabilidad de la estimación futura.</span></li>
+    <li><span class="claim">«Si dos intervalos se solapan, la diferencia no es significativa.»</span><span class="fix">No necesariamente. Con dos estimaciones independientes de error estándar 1 que difieren en 3, los IC al 95 % (±1,96) se solapan, pero el contraste de la diferencia da p = 0,034. Para comparar, calcula el intervalo de la diferencia.</span></li>
+  </ul>
+
+  <h2 id="deep-learning">En aprendizaje profundo</h2>
+  <ul>
+    <li><strong>Métricas con su intervalo.</strong> La accuracy en test es una estimación: publícala con su intervalo. Para métricas sin fórmula sencilla (F1, AUC, BLEU), usa bootstrap sobre los ejemplos de test.</li>
+    <li><strong>Semillas.</strong> La desviación típica entre ejecuciones describe cuánto varía el entrenamiento; el IC de la media describe cuánto sabes de la media. Con 5 semillas, el IC al 95 % de la media es la media ± 2,78 · s/√5, es decir, ± 1,24 · s.</li>
+    <li><strong>Comparar modelos.</strong> Si dos modelos se evalúan sobre el mismo test, calcula el intervalo de la diferencia con un bootstrap emparejado, en vez de mirar si se solapan los intervalos de cada uno.</li>
+  </ul>
+
+  <h2 id="repaso">Autoevaluación</h2>
+  <Quiz lang="es" questions={questions} />
+
+  <h2 id="profundizar">Para profundizar</h2>
+  <ul class="refs-full">
+    <li>{books.wilks.full.es} <span class="where">§5.1.7 (intervalos de confianza por inversión de contrastes) y §5.3 (bootstrap).</span></li>
+    <li><a href={books.pml1.url}>{books.pml1.full.es}</a> <span class="where">§4.7.3–4.7.5 (bootstrap, intervalos de confianza y por qué no son de credibilidad) y §4.6.6 (intervalos de credibilidad).</span></li>
+    <li><a href={books.pml2.url}>{books.pml2.full.es}</a> <span class="where">§3.3 (estadística frecuentista).</span></li>
+    <li><a href="https://doi.org/10.1007/s10654-016-0149-3">Greenland, S. et al. (2016). Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations. European Journal of Epidemiology, 31(4), 337–350.</a></li>
+  </ul>
+</ConceptLayout>
